@@ -1,7 +1,31 @@
 // CardsSection.jsx
-import { MoreVertical } from 'lucide-react'
+import { MoreVertical, Plus, CreditCard } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import api from '../../../../utils/api'
+import AddCardModal from './AddCardModal'
 
 export default function CardsSection({ user, stats }) {
+  const [cards, setCards] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showAddCard, setShowAddCard] = useState(false)
+
+  useEffect(() => {
+    fetchCards()
+  }, [])
+
+  const fetchCards = async () => {
+    try {
+      const response = await api.get('/user/cards')
+      if (response.data.success) {
+        setCards(response.data.data.cards)
+      }
+    } catch (error) {
+      console.error('Failed to fetch cards:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -9,9 +33,19 @@ export default function CardsSection({ user, stats }) {
     }).format(amount || 0)
   }
 
+  const getCardIcon = (brand) => {
+    const brandLower = brand?.toLowerCase()
+    switch (brandLower) {
+      case 'visa': return '💳';
+      case 'mastercard': return '💳';
+      case 'amex': return '💳';
+      case 'discover': return '💳';
+      default: return '💳';
+    }
+  }
+
   return (
     <div className="space-y-6">
-      
       {/* Cards Header */}
       <div className="flex items-center justify-between">
         <h3 className="font-bold text-gray-900 text-xl">Cards</h3>
@@ -20,41 +54,42 @@ export default function CardsSection({ user, stats }) {
         </button>
       </div>
 
-      {/* Cards Grid - 2 columns on desktop, 1 on mobile */}
+      {/* Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Link a Card */}
-        <div className="bg-gray-100 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-200 transition-colors">
+        <div 
+          onClick={() => setShowAddCard(true)}
+          className="bg-gray-100 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-200 transition-colors"
+        >
           <div className="w-16 h-16 bg-gray-300 rounded-lg flex items-center justify-center mb-4">
-            <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
-              <rect width="40" height="40" rx="8" fill="#9CA3AF" />
-              <text x="50%" y="50%" dominantBaseline="middle" textAnchor="middle" fontSize="24" fill="white" fontWeight="bold">
-                +
-              </text>
-            </svg>
+            <Plus size={32} className="text-gray-600" />
           </div>
           <p className="font-medium text-gray-900">Link a card</p>
         </div>
 
-        {/* PayPal Balance */}
-        <div className="bg-white border-2 border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center text-center">
-          <div className="w-16 h-16 border-2 border-blue-600 rounded-lg flex items-center justify-center mb-4">
-            <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
-              <text x="50%" y="50%" dominantBaseline="middle" textAnchor="middle" fontSize="20" fontWeight="bold" fill="#003087">
-                P
-              </text>
-            </svg>
+        {/* Existing Cards */}
+        {cards.slice(0, 1).map(card => (
+          <div key={card.id} className="bg-white border-2 border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 border-2 border-blue-600 rounded-lg flex items-center justify-center mb-4">
+              <span className="text-2xl">{getCardIcon(card.brand)}</span>
+            </div>
+            <p className="text-gray-600 text-sm">{card.brand}</p>
+            <p className="text-lg font-bold text-gray-900 my-2">
+              **** {card.last_four}
+            </p>
+            <p className="text-gray-600 text-sm">Expires {card.expiry}</p>
+            {card.is_default && (
+              <p className="text-green-600 text-xs mt-1">Default</p>
+            )}
           </div>
-          <p className="text-gray-600 text-sm">PayPal balance</p>
-          <p className="text-3xl font-bold text-gray-900 my-2">
-            {formatCurrency(user?.account_balance)}
-          </p>
-          <p className="text-gray-600 text-sm">Available</p>
-        </div>
+        ))}
       </div>
 
-      {/* Full Width Balance Card */}
+      {/* PayPal Balance */}
       <div className="bg-white border border-gray-200 rounded-lg p-6 flex gap-4">
-        <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-lg" />
+        <div className="flex-shrink-0 w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+          <CreditCard className="text-white" size={24} />
+        </div>
         <div className="flex-1">
           <p className="text-sm text-gray-600">PayPal balance</p>
           <p className="text-lg font-medium text-gray-900">
@@ -65,25 +100,46 @@ export default function CardsSection({ user, stats }) {
 
       {/* Card Links */}
       <div className="flex gap-6">
-        <a href="#add-currency" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
-          Add a currency
-        </a>
-        <a href="#currency-calculator" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
-          Currency Calculator
-        </a>
+        <button 
+          onClick={() => setShowAddCard(true)}
+          className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+        >
+          Link a card
+        </button>
+        {cards.length > 0 && (
+          <button 
+            onClick={fetchCards}
+            className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+          >
+            Manage cards
+          </button>
+        )}
       </div>
 
       {/* Shop Section */}
       <div className="bg-white border border-gray-200 rounded-lg p-6 flex gap-4 mt-8">
-        <div className="flex-shrink-0 w-12 h-12 bg-gray-600 rounded-lg" />
+        <div className="flex-shrink-0 w-12 h-12 bg-gray-600 rounded-lg flex items-center justify-center">
+          <CreditCard className="text-white" size={24} />
+        </div>
         <div className="flex-1">
           <h4 className="font-bold text-gray-900 mb-2">Cards</h4>
           <p className="text-gray-600 text-sm mb-4">Shop and send payments more securely. Link your credit card now.</p>
-          <a href="#link-card" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+          <button 
+            onClick={() => setShowAddCard(true)}
+            className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+          >
             Link a card
-          </a>
+          </button>
         </div>
       </div>
+
+      {/* Add Card Modal */}
+      {showAddCard && (
+        <AddCardModal 
+          onClose={() => setShowAddCard(false)}
+          onCardAdded={fetchCards}
+        />
+      )}
     </div>
   )
 }

@@ -1,8 +1,7 @@
-// src/pages/admin/components/admin/TransactionManagement.jsx
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, Filter, Eye, Edit, Trash2, Download } from "lucide-react"
+import { Search, Filter, Eye, Edit, Trash2, Download, RefreshCw } from "lucide-react"
 import api from "../../../../utils/api"
 
 export default function TransactionManagement() {
@@ -13,6 +12,8 @@ export default function TransactionManagement() {
   const [typeFilter, setTypeFilter] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [selectedTransaction, setSelectedTransaction] = useState(null)
+  const [showStatusModal, setShowStatusModal] = useState(false)
 
   useEffect(() => {
     fetchTransactions()
@@ -45,6 +46,24 @@ export default function TransactionManagement() {
     setCurrentPage(1)
   }
 
+  const handleUpdateStatus = async (transactionId, newStatus) => {
+    try {
+      const response = await api.put(`/admin/transactions/${transactionId}/status`, {
+        status: newStatus
+      })
+      
+      if (response.data.success) {
+        alert('Transaction status updated successfully!')
+        setShowStatusModal(false)
+        setSelectedTransaction(null)
+        fetchTransactions()
+      }
+    } catch (error) {
+      console.error('Failed to update transaction status:', error)
+      alert('Failed to update transaction status')
+    }
+  }
+
   const getStatusBadge = (status) => {
     const statusStyles = {
       completed: "bg-green-100 text-green-800",
@@ -67,7 +86,8 @@ export default function TransactionManagement() {
       credit: "bg-green-100 text-green-800",
       debit: "bg-red-100 text-red-800",
       request: "bg-orange-100 text-orange-800",
-      admin_credit: "bg-indigo-100 text-indigo-800"
+      admin_credit: "bg-indigo-100 text-indigo-800",
+      admin_debit: "bg-pink-100 text-pink-800"
     }
     
     return (
@@ -92,13 +112,22 @@ export default function TransactionManagement() {
           <h1 className="text-2xl font-bold text-gray-900">Transaction Management</h1>
           <p className="text-gray-600 mt-1">View and manage all transactions</p>
         </div>
-        <button 
-          onClick={fetchTransactions}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center"
-        >
-          <Download size={16} className="mr-2" />
-          Export
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={fetchTransactions}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium flex items-center"
+          >
+            <RefreshCw size={16} className="mr-2" />
+            Refresh
+          </button>
+          <button 
+            onClick={() => {/* Export functionality */}}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center"
+          >
+            <Download size={16} className="mr-2" />
+            Export
+          </button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -142,6 +171,7 @@ export default function TransactionManagement() {
               <option value="debit">Debit</option>
               <option value="request">Request</option>
               <option value="admin_credit">Admin Credit</option>
+              <option value="admin_debit">Admin Debit</option>
             </select>
           </div>
         </div>
@@ -232,16 +262,20 @@ export default function TransactionManagement() {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end space-x-2">
                           <button
+                            onClick={() => {
+                              setSelectedTransaction(transaction)
+                              setShowStatusModal(true)
+                            }}
                             className="text-blue-600 hover:text-blue-900 p-1 rounded transition-colors"
-                            title="View Details"
+                            title="Update Status"
                           >
-                            <Eye size={16} />
+                            <Edit size={16} />
                           </button>
                           <button
                             className="text-gray-600 hover:text-gray-900 p-1 rounded transition-colors"
-                            title="Edit"
+                            title="View Details"
                           >
-                            <Edit size={16} />
+                            <Eye size={16} />
                           </button>
                         </div>
                       </td>
@@ -283,6 +317,91 @@ export default function TransactionManagement() {
             )}
           </>
         )}
+      </div>
+
+      {/* Update Status Modal */}
+      {showStatusModal && selectedTransaction && (
+        <StatusModal
+          transaction={selectedTransaction}
+          onClose={() => {
+            setShowStatusModal(false)
+            setSelectedTransaction(null)
+          }}
+          onUpdate={handleUpdateStatus}
+        />
+      )}
+    </div>
+  )
+}
+
+// Status Modal Component
+function StatusModal({ transaction, onClose, onUpdate }) {
+  const [newStatus, setNewStatus] = useState(transaction.status)
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (newStatus === transaction.status) {
+      alert('Please select a different status')
+      return
+    }
+
+    setLoading(true)
+    await onUpdate(transaction.id, newStatus)
+    setLoading(false)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg max-w-md w-full p-6">
+        <h3 className="text-lg font-semibold mb-4">Update Transaction Status</h3>
+        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+          <p className="text-sm text-gray-700">
+            Transaction: <strong>{transaction.reference_id}</strong>
+          </p>
+          <p className="text-sm text-gray-700 mt-1">
+            Current Status: <strong>{transaction.status}</strong>
+          </p>
+          <p className="text-sm text-gray-700 mt-1">
+            Amount: <strong>${transaction.amount}</strong>
+          </p>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                New Status
+              </label>
+              <select
+                value={newStatus}
+                onChange={(e) => setNewStatus(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              >
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex justify-end space-x-3 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {loading ? 'Updating...' : 'Update Status'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )

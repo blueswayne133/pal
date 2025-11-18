@@ -52,6 +52,10 @@ export default function Dashboard() {
     }
   }
 
+  const handleUserUpdate = () => {
+    fetchDashboardData() // Refresh user data
+  }
+
   if (loading) {
     return (
       <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-8">
@@ -75,7 +79,7 @@ export default function Dashboard() {
   return (
     <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
       <div className="md:col-span-2 space-y-6">
-        <MobilePhoneCard user={userData} />
+        <MobilePhoneCard user={userData} onUpdate={handleUserUpdate} />
         <BalanceCard user={userData} stats={dashboardStats} />
         <RecentActivityCard user={userData} />
       </div>
