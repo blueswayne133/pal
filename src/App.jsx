@@ -10,6 +10,7 @@ import SecurityPage from "./pages/home/SecurityPage"
 import AdminLogin from "./pages/admin/AdminLogin"
 import AdminDashboard from "./pages/admin/AdminDashboard"
 import AdminProtectedRoute from "./components/AdminProtectedRoute"
+import WithdrawalSuccess from "./pages/user/WithdrawalSuccess"
 
 function App() {
   return (
@@ -31,6 +32,16 @@ function App() {
         element={
           <ProtectedRoute>
             <UserDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Withdrawal Success Route */}
+      <Route
+        path="/withdrawal/success"
+        element={
+          <ProtectedRoute>
+            <WithdrawalSuccess />
           </ProtectedRoute>
         }
       />
