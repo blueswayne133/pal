@@ -5,6 +5,7 @@ import {
   Users, 
   CreditCard, 
   Mail, 
+  DollarSign,
   ChevronLeft,
   ChevronRight,
   Settings
@@ -21,6 +22,7 @@ export default function AdminSidebar({
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "users", label: "User Management", icon: Users },
+    { id: "withdrawals", label: "Withdrawal Management", icon: DollarSign }, 
     { id: "transactions", label: "Transactions", icon: CreditCard },
     { id: "email", label: "Email Management", icon: Mail },
   ]

@@ -47,6 +47,24 @@ export default function Withdrawal() {
             processingTime: "2-5 business days",
             fee: "1% (min $1) + $25 wire fee",
             requiresSwift: true
+        },
+        {
+            id: "paypal",
+            name: "PayPal",
+            icon: CreditCard,
+            description: "Transfer to PayPal account",
+            processingTime: "1-2 business days",
+            fee: "2.9% (min $0.30)",
+            requiresPaypal: false
+        },
+        {
+            id: "crypto",
+            name: "Cryptocurrency",
+            icon: Building,
+            description: "Transfer to crypto wallet",
+            processingTime: "Instant",
+            fee: "1.5% network fee",
+            requiresWallet: false
         }
     ]
 
@@ -83,13 +101,14 @@ export default function Withdrawal() {
         setError("")
         setSuccess("")
 
-        // Basic validation
+        // Basic validation for all methods
         if (!bankName || !accountNumber || !accountHolderName || !bankCountry) {
             setError("Please fill in all required bank details")
             setLoading(false)
             return
         }
 
+        // Method-specific validation
         if (method === 'bank_transfer' && !routingNumber) {
             setError("Routing number is required for bank transfers")
             setLoading(false)
@@ -102,18 +121,33 @@ export default function Withdrawal() {
             return
         }
 
+        // For PayPal and Crypto, you might want different validation
+        if (method === 'paypal') {
+            // PayPal-specific validation could go here
+            console.log('PayPal withdrawal selected')
+        }
+
+        if (method === 'crypto') {
+            // Crypto-specific validation could go here
+            console.log('Crypto withdrawal selected')
+        }
+
         try {
-            const response = await api.post('/user/withdrawal', {
+            const withdrawalData = {
                 amount: parseFloat(amount),
                 method: method,
                 bank_name: bankName,
                 account_number: accountNumber,
-                routing_number: routingNumber,
-                swift_code: swiftCode,
-                iban: iban,
+                routing_number: routingNumber || null,
+                swift_code: swiftCode || null,
+                iban: iban || null,
                 bank_country: bankCountry,
                 account_holder_name: accountHolderName
-            })
+            }
+
+            console.log('Sending withdrawal data:', withdrawalData)
+
+            const response = await api.post('/user/withdrawal', withdrawalData)
 
             if (response.data.success) {
                 // Navigate to success page with withdrawal data
@@ -121,9 +155,7 @@ export default function Withdrawal() {
                     state: {
                         withdrawalData: {
                             amount: parseFloat(amount),
-                            clearanceFee: method === 'wire_transfer' 
-                                ? Math.max(parseFloat(amount) * 0.01, 1) + 25
-                                : Math.max(parseFloat(amount) * 0.01, 1),
+                            clearanceFee: calculateFee(parseFloat(amount), method),
                             userName: accountHolderName,
                             referenceId: response.data.data?.withdrawal?.reference_id || 'PPWD' + Date.now(),
                             timestamp: new Date().toISOString()
@@ -132,9 +164,49 @@ export default function Withdrawal() {
                 })
             }
         } catch (err) {
-            setError(err.response?.data?.message || 'Withdrawal request failed')
+            console.error('Withdrawal error details:', err.response?.data)
+            console.error('Withdrawal error:', err)
+            
+            // Handle validation errors specifically
+            if (err.response?.status === 422 && err.response?.data?.errors) {
+                const validationErrors = err.response.data.errors
+                const firstError = Object.values(validationErrors)[0][0]
+                setError(firstError || 'Please check your withdrawal details')
+            } else if (err.response?.status === 500) {
+                setError('Server error occurred. Please try again or contact support.')
+            } else {
+                setError(err.response?.data?.message || 'Withdrawal request failed')
+            }
         } finally {
             setLoading(false)
+        }
+    }
+
+    const calculateFee = (amount, method) => {
+        switch (method) {
+            case 'wire_transfer':
+                return Math.max(amount * 0.01, 1) + 25;
+            case 'paypal':
+                return (amount * 0.029) + 0.30;
+            case 'crypto':
+                return amount * 0.015;
+            case 'bank_transfer':
+            default:
+                return Math.max(amount * 0.01, 1);
+        }
+    }
+
+    const getFeeDescription = (method) => {
+        switch (method) {
+            case 'wire_transfer':
+                return '1% (min $1) + $25 wire fee';
+            case 'paypal':
+                return '2.9% + $0.30';
+            case 'crypto':
+                return '1.5% network fee';
+            case 'bank_transfer':
+            default:
+                return '1% (min $1)';
         }
     }
 
@@ -180,8 +252,7 @@ export default function Withdrawal() {
 
     return (
         <div className="flex min-h-screen flex-col bg-gray-50">
-         
-
+            <Header />
             <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 md:px-8">
                 {/* Tabs */}
                 <div className="mb-8 border-b border-gray-200">
@@ -292,19 +363,27 @@ export default function Withdrawal() {
 
                                     {/* Bank Details Form */}
                                     <div className="border-t border-gray-200 pt-6">
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Bank Account Details</h3>
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                                            {method === 'paypal' ? 'PayPal Account Details' : 
+                                             method === 'crypto' ? 'Crypto Wallet Details' : 'Bank Account Details'}
+                                        </h3>
                                         
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {/* Bank Name */}
+                                            {/* Bank/Wallet Name */}
                                             <div className="md:col-span-2">
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Bank Name *
+                                                    {method === 'paypal' ? 'PayPal Email' :
+                                                     method === 'crypto' ? 'Wallet Name' : 'Bank Name'} *
                                                 </label>
                                                 <input
                                                     type="text"
                                                     value={bankName}
                                                     onChange={(e) => setBankName(e.target.value)}
-                                                    placeholder="Enter bank name"
+                                                    placeholder={
+                                                        method === 'paypal' ? 'Enter PayPal email address' :
+                                                        method === 'crypto' ? 'Enter wallet name (e.g., MetaMask, Trust Wallet)' :
+                                                        'Enter bank name'
+                                                    }
                                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                     required
                                                 />
@@ -313,28 +392,36 @@ export default function Withdrawal() {
                                             {/* Account Holder Name */}
                                             <div className="md:col-span-2">
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Account Holder Name *
+                                                    {method === 'crypto' ? 'Wallet Holder Name' : 'Account Holder Name'} *
                                                 </label>
                                                 <input
                                                     type="text"
                                                     value={accountHolderName}
                                                     onChange={(e) => setAccountHolderName(e.target.value)}
-                                                    placeholder="Enter account holder name"
+                                                    placeholder={
+                                                        method === 'crypto' ? 'Enter wallet holder name' :
+                                                        'Enter account holder name'
+                                                    }
                                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                     required
                                                 />
                                             </div>
 
-                                            {/* Account Number */}
+                                            {/* Account Number / Wallet Address */}
                                             <div className="md:col-span-2">
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Account Number *
+                                                    {method === 'paypal' ? 'PayPal Email' :
+                                                     method === 'crypto' ? 'Wallet Address' : 'Account Number'} *
                                                 </label>
                                                 <input
                                                     type="text"
                                                     value={accountNumber}
                                                     onChange={(e) => setAccountNumber(e.target.value)}
-                                                    placeholder="Enter account number"
+                                                    placeholder={
+                                                        method === 'paypal' ? 'Enter PayPal email address' :
+                                                        method === 'crypto' ? 'Enter crypto wallet address' :
+                                                        'Enter account number'
+                                                    }
                                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                     required
                                                 />
@@ -374,41 +461,68 @@ export default function Withdrawal() {
                                                 </div>
                                             )}
 
-                                            {/* IBAN (Optional) */}
-                                            <div className="md:col-span-2">
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    IBAN (Optional)
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={iban}
-                                                    onChange={(e) => setIban(e.target.value)}
-                                                    placeholder="Enter IBAN"
-                                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
+                                            {/* IBAN (Optional for bank methods) */}
+                                            {(method === 'bank_transfer' || method === 'wire_transfer') && (
+                                                <div className="md:col-span-2">
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                        IBAN (Optional)
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={iban}
+                                                        onChange={(e) => setIban(e.target.value)}
+                                                        placeholder="Enter IBAN"
+                                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                    />
+                                                </div>
+                                            )}
 
-                                            {/* Bank Country */}
-                                            <div className="md:col-span-2">
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Bank Country *
-                                                </label>
-                                                <select
-                                                    value={bankCountry}
-                                                    onChange={(e) => setBankCountry(e.target.value)}
-                                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                    required
-                                                >
-                                                    <option value="">Select Country</option>
-                                                    <option value="United States">United States</option>
-                                                    <option value="United Kingdom">United Kingdom</option>
-                                                    <option value="Canada">Canada</option>
-                                                    <option value="Australia">Australia</option>
-                                                    <option value="Germany">Germany</option>
-                                                    <option value="France">France</option>
-                                                    <option value="Other">Other</option>
-                                                </select>
-                                            </div>
+                                            {/* Bank Country (For bank methods) */}
+                                            {(method === 'bank_transfer' || method === 'wire_transfer') && (
+                                                <div className="md:col-span-2">
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                        Bank Country *
+                                                    </label>
+                                                    <select
+                                                        value={bankCountry}
+                                                        onChange={(e) => setBankCountry(e.target.value)}
+                                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                        required
+                                                    >
+                                                        <option value="">Select Country</option>
+                                                        <option value="United States">United States</option>
+                                                        <option value="United Kingdom">United Kingdom</option>
+                                                        <option value="Canada">Canada</option>
+                                                        <option value="Australia">Australia</option>
+                                                        <option value="Germany">Germany</option>
+                                                        <option value="France">France</option>
+                                                        <option value="Other">Other</option>
+                                                    </select>
+                                                </div>
+                                            )}
+
+                                            {/* Crypto Network (For crypto method) */}
+                                            {method === 'crypto' && (
+                                                <div className="md:col-span-2">
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                        Crypto Network *
+                                                    </label>
+                                                    <select
+                                                        value={bankCountry}
+                                                        onChange={(e) => setBankCountry(e.target.value)}
+                                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                        required
+                                                    >
+                                                        <option value="">Select Network</option>
+                                                        <option value="Ethereum">Ethereum (ERC-20)</option>
+                                                        <option value="Bitcoin">Bitcoin</option>
+                                                        <option value="Binance">Binance Smart Chain (BEP-20)</option>
+                                                        <option value="Polygon">Polygon</option>
+                                                        <option value="Solana">Solana</option>
+                                                        <option value="Other">Other Network</option>
+                                                    </select>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
@@ -422,24 +536,16 @@ export default function Withdrawal() {
                                                     <span>{formatCurrency(parseFloat(amount))}</span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span>Fee ({method === 'wire_transfer' ? '1% + $25' : '1%'}):</span>
+                                                    <span>Fee ({getFeeDescription(method).replace('(', '(').replace(')', ')')}):</span>
                                                     <span>
-                                                        {formatCurrency(
-                                                            method === 'wire_transfer' 
-                                                                ? Math.max(parseFloat(amount) * 0.01, 1) + 25
-                                                                : Math.max(parseFloat(amount) * 0.01, 1)
-                                                        )}
+                                                        {formatCurrency(calculateFee(parseFloat(amount), method))}
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between border-t border-gray-200 pt-2 font-semibold">
                                                     <span>You'll Receive:</span>
                                                     <span>
                                                         {formatCurrency(
-                                                            parseFloat(amount) - 
-                                                            (method === 'wire_transfer' 
-                                                                ? Math.max(parseFloat(amount) * 0.01, 1) + 25
-                                                                : Math.max(parseFloat(amount) * 0.01, 1)
-                                                            )
+                                                            parseFloat(amount) - calculateFee(parseFloat(amount), method)
                                                         )}
                                                     </span>
                                                 </div>
@@ -480,13 +586,15 @@ export default function Withdrawal() {
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">Processing Time:</span>
                                         <span className="font-semibold">
-                                            {method === 'wire_transfer' ? '2-5 business days' : '1-3 business days'}
+                                            {method === 'wire_transfer' ? '2-5 business days' : 
+                                             method === 'paypal' ? '1-2 business days' :
+                                             method === 'crypto' ? 'Instant' : '1-3 business days'}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">Withdrawal Fee:</span>
                                         <span className="font-semibold">
-                                            {method === 'wire_transfer' ? '1% (min $1) + $25' : '1% (min $1)'}
+                                            {getFeeDescription(method)}
                                         </span>
                                     </div>
                                 </div>
@@ -495,7 +603,7 @@ export default function Withdrawal() {
                             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                                 <h4 className="font-semibold text-yellow-800 mb-2">Security Notice</h4>
                                 <ul className="text-sm text-yellow-700 space-y-1">
-                                    <li>• Your bank details are encrypted and secure</li>
+                                    <li>• Your details are encrypted and secure</li>
                                     <li>• Withdrawals are processed manually for security</li>
                                     <li>• Clearance fee required for large transactions</li>
                                     <li>• Contact support for urgent withdrawals</li>
@@ -507,7 +615,8 @@ export default function Withdrawal() {
                                 <ul className="text-sm text-blue-700 space-y-1">
                                     <li>• Valid government ID</li>
                                     <li>• Proof of address</li>
-                                    <li>• Bank statement</li>
+                                    {method !== 'crypto' && <li>• Bank statement</li>}
+                                    {method === 'crypto' && <li>• Wallet verification</li>}
                                 </ul>
                             </div>
                         </div>
@@ -584,7 +693,7 @@ export default function Withdrawal() {
                     </div>
                 )}
             </main>
-
+            <Footer />
         </div>
     )
 }

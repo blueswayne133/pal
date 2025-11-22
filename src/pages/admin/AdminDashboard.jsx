@@ -12,6 +12,7 @@ import api from "../../utils/api"
 import AdminSidebar from "./components/AdminSidebar"
 import AdminHeader from "./components/AdminHeader"
 import { getAdminFromLocalStorage } from "../../utils/localStorage"
+import WithdrawalManagement from "./components/admin/WithdrawalManagement"
 
 export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState("dashboard")
@@ -58,6 +59,8 @@ export default function AdminDashboard() {
         return <UserDetail user={selectedUser} onBack={handleBackToList} />
       case "transactions":
         return <TransactionManagement />
+      case "withdrawals":
+        return <WithdrawalManagement />
       case "email":
         return <EmailManagement />
       default:
