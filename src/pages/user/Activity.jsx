@@ -6,6 +6,7 @@ import Header from "./components/Header"
 import Footer from "./components/Footer"
 import { Search, Download, Sliders, Calendar, User, ArrowUpRight, ArrowDownLeft } from "lucide-react"
 import api from "../../utils/api"
+import TransactionReceiptModal from "./components/cards/TransactionReceiptModal"
 
 export default function Activity() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -14,10 +15,25 @@ export default function Activity() {
   const [error, setError] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
   const [filterType, setFilterType] = useState("all")
+  const [user, setUser] = useState(null)
+  const [selectedTransaction, setSelectedTransaction] = useState(null)
+  const [showReceipt, setShowReceipt] = useState(false)
 
   useEffect(() => {
     fetchTransactions()
+    fetchUserProfile()
   }, [])
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await api.get('/user/profile')
+      if (response.data.success) {
+        setUser(response.data.data.user)
+      }
+    } catch (err) {
+      console.error('Error fetching user profile:', err)
+    }
+  }
 
   const fetchTransactions = async () => {
     try {
@@ -86,21 +102,52 @@ export default function Activity() {
   }
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount)
+    const currencySymbol = user?.currency || '$'
+    const amountFormatted = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount || 0)
+    
+    return `${currencySymbol}${amountFormatted}`
   }
 
   const exportTransactions = () => {
+    // Get currency name for export
+    const getCurrencyName = (currencySymbol) => {
+      const currencies = {
+        '$': 'USD',
+        '€': 'EUR',
+        '£': 'GBP',
+        '¥': 'JPY',
+        'CA$': 'CAD',
+        'A$': 'AUD',
+        'CHF': 'CHF',
+        'CN¥': 'CNY',
+        '₹': 'INR',
+        'S$': 'SGD',
+        'HK$': 'HKD',
+        'kr': 'SEK',
+        'NZ$': 'NZD',
+        'MX$': 'MXN',
+        'R$': 'BRL',
+        '₽': 'RUB',
+        'R': 'ZAR'
+      }
+      return currencies[user?.currency || '$'] || 'USD'
+    }
+
+    const currencyCode = getCurrencyName(user?.currency || '$')
+    
     const csvContent = [
-      ['Date', 'Description', 'Type', 'Status', 'Amount', 'Reference ID'],
+      ['Date', 'Description', 'Type', 'Status', `Amount (${currencyCode})`, 'Fee', 'Net Amount', 'Reference ID'],
       ...filteredTransactions.map(t => [
         formatDate(t.created_at),
         t.description || 'N/A',
         t.type,
         t.status,
-        formatCurrency(t.amount),
+        t.amount,
+        t.fee || 0,
+        t.net_amount || t.amount,
         t.reference_id
       ])
     ].map(row => row.join(',')).join('\n')
@@ -114,10 +161,15 @@ export default function Activity() {
     window.URL.revokeObjectURL(url)
   }
 
+  const handleTransactionClick = (transaction) => {
+    setSelectedTransaction(transaction)
+    setShowReceipt(true)
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col bg-gray-50">
-     
+        <Header />
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 md:px-8">
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -130,13 +182,18 @@ export default function Activity() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
-    
+
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 md:px-8">
         {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Transaction History</h1>
           <p className="text-gray-600">View and manage your payment activities</p>
+          {user?.currency && (
+            <p className="text-sm text-gray-500 mt-1">
+              Amounts displayed in: {user.currency}
+            </p>
+          )}
         </div>
 
         {/* Search and Filter Bar */}
@@ -200,7 +257,8 @@ export default function Activity() {
             {filteredTransactions.map((transaction) => (
               <div
                 key={transaction.id}
-                className="rounded-lg border border-gray-200 bg-white p-6 transition-colors hover:bg-gray-50"
+                onClick={() => handleTransactionClick(transaction)}
+                className="rounded-lg border border-gray-200 bg-white p-6 transition-colors hover:bg-gray-50 cursor-pointer"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -296,6 +354,18 @@ export default function Activity() {
       </main>
 
       <Footer />
+
+      {/* Receipt Modal */}
+      {showReceipt && selectedTransaction && (
+        <TransactionReceiptModal
+          transaction={selectedTransaction}
+          user={user}
+          onClose={() => {
+            setShowReceipt(false)
+            setSelectedTransaction(null)
+          }}
+        />
+      )}
     </div>
   )
 }

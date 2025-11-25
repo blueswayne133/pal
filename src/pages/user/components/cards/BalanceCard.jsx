@@ -3,10 +3,40 @@ import { MoreVertical } from 'lucide-react'
 
 export default function BalanceCard({ user, stats }) {
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
+    const currencySymbol = user?.currency || '$'
+    
+    // Format the number with proper decimal places
+    const amountFormatted = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(amount || 0)
+    
+    // Return the currency symbol + formatted amount
+    return `${currencySymbol}${amountFormatted}`
+  }
+
+  // Helper function to get currency name for display
+  const getCurrencyName = () => {
+    const currencies = {
+      '$': 'US Dollar',
+      '€': 'Euro',
+      '£': 'British Pound',
+      '¥': 'Japanese Yen',
+      'CA$': 'Canadian Dollar',
+      'A$': 'Australian Dollar',
+      'CHF': 'Swiss Franc',
+      'CN¥': 'Chinese Yuan',
+      '₹': 'Indian Rupee',
+      'S$': 'Singapore Dollar',
+      'HK$': 'Hong Kong Dollar',
+      'kr': 'Swedish Krona',
+      'NZ$': 'New Zealand Dollar',
+      'MX$': 'Mexican Peso',
+      'R$': 'Brazilian Real',
+      '₽': 'Russian Ruble',
+      'R': 'South African Rand'
+    }
+    return currencies[user?.currency || '$'] || 'US Dollar'
   }
 
   return (
@@ -22,7 +52,12 @@ export default function BalanceCard({ user, stats }) {
           {formatCurrency(user?.account_balance)}
         </p>
       </div>
-      <p className="text-gray-600 text-sm">Available</p>
+      <div className="flex justify-between items-center">
+        <p className="text-gray-600 text-sm">Available</p>
+        <p className="text-xs text-gray-500">
+          {getCurrencyName()}
+        </p>
+      </div>
     </div>
   )
 }

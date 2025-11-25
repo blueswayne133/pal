@@ -5,6 +5,7 @@ export default function AccountSettings({ user, onUpdateProfile }) {
   const [editingField, setEditingField] = useState(null)
   const [formData, setFormData] = useState({})
   const [loading, setLoading] = useState(false)
+  const [currencyLoading, setCurrencyLoading] = useState(false)
 
   const handleEdit = (field, value = '') => {
     setEditingField(field)
@@ -29,6 +30,38 @@ export default function AccountSettings({ user, onUpdateProfile }) {
     setLoading(false)
   }
 
+  // NEW: Handle currency change with auto-save
+  const handleCurrencyChange = async (newCurrency) => {
+    setCurrencyLoading(true)
+    try {
+      const result = await onUpdateProfile({ currency: newCurrency })
+      if (!result.success) {
+        alert('Failed to update currency. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error updating currency:', error)
+      alert('Error updating currency. Please try again.')
+    } finally {
+      setCurrencyLoading(false)
+    }
+  }
+
+  // NEW: Handle language change with auto-save
+  const handleLanguageChange = async (newLanguage) => {
+    const result = await onUpdateProfile({ language: newLanguage })
+    if (!result.success) {
+      alert('Failed to update language. Please try again.')
+    }
+  }
+
+  // NEW: Handle timezone change with auto-save
+  const handleTimezoneChange = async (newTimezone) => {
+    const result = await onUpdateProfile({ timezone: newTimezone })
+    if (!result.success) {
+      alert('Failed to update timezone. Please try again.')
+    }
+  }
+
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
@@ -42,6 +75,36 @@ export default function AccountSettings({ user, onUpdateProfile }) {
     if (!dateString) return 'Recently'
     const date = new Date(dateString)
     return `Joined in ${date.getFullYear()}`
+  }
+
+  const currencies = [
+    { symbol: '$', name: 'US Dollar', code: 'USD' },
+    { symbol: '€', name: 'Euro', code: 'EUR' },
+    { symbol: '£', name: 'British Pound', code: 'GBP' },
+    { symbol: '¥', name: 'Japanese Yen', code: 'JPY' },
+    { symbol: 'CA$', name: 'Canadian Dollar', code: 'CAD' },
+    { symbol: 'A$', name: 'Australian Dollar', code: 'AUD' },
+    { symbol: 'CHF', name: 'Swiss Franc', code: 'CHF' },
+    { symbol: 'CN¥', name: 'Chinese Yuan', code: 'CNY' },
+    { symbol: '₹', name: 'Indian Rupee', code: 'INR' },
+    { symbol: 'S$', name: 'Singapore Dollar', code: 'SGD' },
+    { symbol: 'HK$', name: 'Hong Kong Dollar', code: 'HKD' },
+    { symbol: 'kr', name: 'Swedish Krona', code: 'SEK' },
+    { symbol: 'NZ$', name: 'New Zealand Dollar', code: 'NZD' },
+    { symbol: 'MX$', name: 'Mexican Peso', code: 'MXN' },
+    { symbol: 'R$', name: 'Brazilian Real', code: 'BRL' },
+    { symbol: '₽', name: 'Russian Ruble', code: 'RUB' },
+    { symbol: 'R', name: 'South African Rand', code: 'ZAR' }
+  ]
+
+  const getCurrencyName = (currencySymbol) => {
+    const currency = currencies.find(c => c.symbol === currencySymbol)
+    return currency ? currency.name : 'US Dollar'
+  }
+
+  const getCurrencyCode = (currencySymbol) => {
+    const currency = currencies.find(c => c.symbol === currencySymbol)
+    return currency ? currency.code : 'USD'
   }
 
   if (!user) {
@@ -114,34 +177,65 @@ export default function AccountSettings({ user, onUpdateProfile }) {
             <div className="space-y-4">
               <select 
                 value={user.language || 'en'}
-                onChange={(e) => onUpdateProfile({ language: e.target.value })}
+                onChange={(e) => handleLanguageChange(e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="en">Language - English</option>
                 <option value="es">Language - Español</option>
                 <option value="fr">Language - Français</option>
+                <option value="de">Language - Deutsch</option>
+                <option value="ja">Language - 日本語</option>
+                <option value="zh">Language - 中文</option>
               </select>
               
               <select 
                 value={user.timezone || 'UTC'}
-                onChange={(e) => onUpdateProfile({ timezone: e.target.value })}
+                onChange={(e) => handleTimezoneChange(e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="America/Los_Angeles">Time zone - (GMT-08:00) Pacific Time (Los Angeles)</option>
                 <option value="America/New_York">Time zone - (GMT-05:00) Eastern Time</option>
+                <option value="Europe/London">Time zone - (GMT+00:00) London</option>
+                <option value="Europe/Paris">Time zone - (GMT+01:00) Paris</option>
+                <option value="Asia/Tokyo">Time zone - (GMT+09:00) Tokyo</option>
+                <option value="Asia/Singapore">Time zone - (GMT+08:00) Singapore</option>
                 <option value="UTC">Time zone - UTC</option>
               </select>
 
-              <select 
-                value={user.currency || 'USD'}
-                onChange={(e) => onUpdateProfile({ currency: e.target.value })}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="USD">Currency - USD</option>
-                <option value="EUR">Currency - EUR</option>
-                <option value="GBP">Currency - GBP</option>
-              </select>
+              <div className="relative">
+                <select 
+                  value={user.currency || '$'}
+                  onChange={(e) => handleCurrencyChange(e.target.value)}
+                  disabled={currencyLoading}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {currencies.map(currency => (
+                    <option key={currency.symbol} value={currency.symbol}>
+                      Currency - {currency.symbol} ({currency.code}) - {currency.name}
+                    </option>
+                  ))}
+                </select>
+                {currencyLoading && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  </div>
+                )}
+              </div>
             </div>
+          </div>
+
+          {/* Current Currency Display */}
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h4 className="font-semibold text-blue-900 mb-2">Current Currency</h4>
+            <p className="text-blue-700">
+              {user.currency || '$'} - {getCurrencyName(user.currency || '$')} ({getCurrencyCode(user.currency || '$')})
+            </p>
+            <p className="text-sm text-blue-600 mt-1">
+              All amounts will be displayed in this currency
+            </p>
+            {currencyLoading && (
+              <p className="text-sm text-blue-500 mt-2">Updating currency...</p>
+            )}
           </div>
         </div>
 

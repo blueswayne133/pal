@@ -118,12 +118,17 @@ export default function WithdrawalManagement() {
     }
     return colors[status] || 'bg-gray-100 text-gray-800'
   }
-
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount)
+    const currencySymbol = user?.currency || '$'
+    
+    // Format the number with proper decimal places
+    const amountFormatted = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount || 0)
+    
+    // Return the currency symbol + formatted amount
+    return `${currencySymbol}${amountFormatted}`
   }
 
   const formatDate = (dateString) => {
@@ -400,12 +405,17 @@ export default function WithdrawalManagement() {
 }
 
 // Detail Modal Component
-function WithdrawalDetailModal({ withdrawal, onClose, onStatusUpdate }) {
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount)
+function WithdrawalDetailModal({ withdrawal, onClose, onStatusUpdate }) {  const formatCurrency = (amount) => {
+    const currencySymbol = user?.currency || '$'
+    
+    // Format the number with proper decimal places
+    const amountFormatted = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount || 0)
+    
+    // Return the currency symbol + formatted amount
+    return `${currencySymbol}${amountFormatted}`
   }
 
   const formatDate = (dateString) => {

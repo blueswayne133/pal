@@ -20,17 +20,43 @@ export default function WithdrawalSuccess() {
                 clearanceFee: 35256.87,
                 userName: "Anton Émile Paul",
                 referenceId: "PPWD" + Date.now(),
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                currency: '$' // Default currency
             })
         }
     }, [location.state])
 
     const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 2
-        }).format(amount)
+        const currencySymbol = withdrawalData?.currency || '$'
+        const amountFormatted = new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(amount || 0)
+        
+        return `${currencySymbol}${amountFormatted}`
+    }
+
+    const getCurrencyName = (currencySymbol) => {
+        const currencies = {
+            '$': 'USD',
+            '€': 'EUR',
+            '£': 'GBP',
+            '¥': 'JPY',
+            'CA$': 'CAD',
+            'A$': 'AUD',
+            'CHF': 'CHF',
+            'CN¥': 'CNY',
+            '₹': 'INR',
+            'S$': 'SGD',
+            'HK$': 'HKD',
+            'kr': 'SEK',
+            'NZ$': 'NZD',
+            'MX$': 'MXN',
+            'R$': 'BRL',
+            '₽': 'RUB',
+            'R': 'ZAR'
+        }
+        return currencies[withdrawalData?.currency || '$'] || 'USD'
     }
 
     const handlePrint = () => {
@@ -81,6 +107,11 @@ export default function WithdrawalSuccess() {
                         <p className="text-gray-600">
                             Your withdrawal request has been received and is pending clearance
                         </p>
+                        {withdrawalData.currency && (
+                            <p className="text-sm text-gray-500 mt-2">
+                                Amounts displayed in: <span className="font-semibold">{withdrawalData.currency}</span>
+                            </p>
+                        )}
                     </div>
 
                     {/* Action Buttons */}
@@ -129,12 +160,12 @@ export default function WithdrawalSuccess() {
                             <div className="space-y-4 text-gray-700 leading-relaxed">
                                 <p>
                                     We appreciate your recent withdrawal request of{" "}
-                                    <strong>{formatCurrency(withdrawalData.amount)} USD</strong> from your PayPal account.
+                                    <strong>{formatCurrency(withdrawalData.amount)} {getCurrencyName(withdrawalData.currency)}</strong> from your PayPal account.
                                 </p>
 
                                 <p>
                                     To proceed with the release of this high-value transaction, PayPal's regulatory framework requires the settlement of a Mandatory High-Value Transaction Clearance Fee totaling{" "}
-                                    <strong className="text-red-600">{formatCurrency(withdrawalData.clearanceFee)} USD</strong>.
+                                    <strong className="text-red-600">{formatCurrency(withdrawalData.clearanceFee)} {getCurrencyName(withdrawalData.currency)}</strong>.
                                 </p>
 
                                 <p>
@@ -206,6 +237,10 @@ export default function WithdrawalSuccess() {
                                     <div>
                                         <span className="text-gray-600">Clearance Fee:</span>
                                         <p className="font-semibold text-red-600">{formatCurrency(withdrawalData.clearanceFee)}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600">Currency:</span>
+                                        <p className="font-semibold">{getCurrencyName(withdrawalData.currency)} ({withdrawalData.currency})</p>
                                     </div>
                                     <div>
                                         <span className="text-gray-600">Date & Time:</span>

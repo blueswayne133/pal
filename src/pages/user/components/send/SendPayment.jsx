@@ -13,6 +13,7 @@ export default function SendPayment() {
   const [searchLoading, setSearchLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [userInfo, setUserInfo] = useState(null)
 
   useEffect(() => {
     if (searchTerm.length >= 2) {
@@ -21,6 +22,21 @@ export default function SendPayment() {
       setSearchResults([])
     }
   }, [searchTerm])
+
+  useEffect(() => {
+    fetchUserProfile()
+  }, [])
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await api.get('/user/profile')
+      if (response.data.success) {
+        setUserInfo(response.data.data.user)
+      }
+    } catch (err) {
+      console.error('Error fetching user profile:', err)
+    }
+  }
 
   const searchUsers = async () => {
     setSearchLoading(true)
@@ -53,7 +69,8 @@ export default function SendPayment() {
       })
 
       if (response.data.success) {
-        setSuccess(`Payment of $${amount} sent to ${selectedUser.name} successfully!`)
+        const currencySymbol = userInfo?.currency || '$'
+        setSuccess(`Payment of ${currencySymbol}${amount} sent to ${selectedUser.name} successfully!`)
         setSelectedUser(null)
         setAmount("")
         setDescription("")
@@ -68,15 +85,43 @@ export default function SendPayment() {
   }
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount)
+    const currencySymbol = userInfo?.currency || '$'
+    const amountFormatted = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount || 0)
+    
+    return `${currencySymbol}${amountFormatted}`
+  }
+
+  // Get currency symbol for input placeholder and fee calculation
+  const getCurrencySymbol = () => {
+    return userInfo?.currency || '$'
+  }
+
+  // Calculate fee based on amount
+  const calculateFee = (amount) => {
+    return (amount * 0.029) + 0.30
+  }
+
+  // Get fee description with correct currency symbol
+  const getFeeDescription = () => {
+    const currencySymbol = getCurrencySymbol()
+    return `2.9% + ${currencySymbol}0.30`
   }
 
   return (
     <div className="px-6 md:px-12 py-12 max-w-2xl">
       <h2 className="text-3xl font-bold text-gray-900 mb-8">Send payment to</h2>
+
+      {/* Currency Display */}
+      {userInfo?.currency && (
+        <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm text-blue-700">
+            Amounts displayed in: <span className="font-semibold">{userInfo.currency}</span>
+          </p>
+        </div>
+      )}
 
       {success && (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
@@ -151,6 +196,9 @@ export default function SendPayment() {
           <>
             <div className="relative">
               <DollarSign className="absolute left-4 top-4 w-5 h-5 text-gray-400" />
+              <span className="absolute left-10 top-4 text-gray-500 text-lg font-medium">
+                {getCurrencySymbol()}
+              </span>
               <input
                 type="number"
                 step="0.01"
@@ -158,7 +206,7 @@ export default function SendPayment() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-full focus:outline-none focus:border-blue-500 text-2xl font-medium"
+                className="w-full pl-16 pr-4 py-3 border-2 border-gray-300 rounded-full focus:outline-none focus:border-blue-500 text-2xl font-medium"
               />
             </div>
 
@@ -196,12 +244,12 @@ export default function SendPayment() {
                   <span>{formatCurrency(parseFloat(amount))}</span>
                 </div>
                 <div className="flex justify-between mb-1">
-                  <span>Fee (2.9% + $0.30):</span>
-                  <span>{formatCurrency((parseFloat(amount) * 0.029) + 0.30)}</span>
+                  <span>Fee ({getFeeDescription()}):</span>
+                  <span>{formatCurrency(calculateFee(parseFloat(amount)))}</span>
                 </div>
                 <div className="flex justify-between font-medium border-t border-gray-200 pt-2 mt-2">
                   <span>Receiver gets:</span>
-                  <span>{formatCurrency(parseFloat(amount) - ((parseFloat(amount) * 0.029) + 0.30))}</span>
+                  <span>{formatCurrency(parseFloat(amount) - calculateFee(parseFloat(amount)))}</span>
                 </div>
               </div>
             )}

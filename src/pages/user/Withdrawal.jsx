@@ -69,18 +69,19 @@ export default function Withdrawal() {
     ]
 
     useEffect(() => {
-        fetchWithdrawalInfo()
+        fetchUserProfile() // Changed from fetchWithdrawalInfo
         fetchWithdrawals()
     }, [])
 
-    const fetchWithdrawalInfo = async () => {
+    // CHANGED: Fetch user profile instead of withdrawal info
+    const fetchUserProfile = async () => {
         try {
-            const response = await api.get('/user/withdrawal-info')
+            const response = await api.get('/user/profile')
             if (response.data.success) {
-                setUserInfo(response.data.data)
+                setUserInfo(response.data.data.user) // Now getting user object with currency
             }
         } catch (error) {
-            console.error('Error fetching withdrawal info:', error)
+            console.error('Error fetching user profile:', error)
         }
     }
 
@@ -158,7 +159,8 @@ export default function Withdrawal() {
                             clearanceFee: calculateFee(parseFloat(amount), method),
                             userName: accountHolderName,
                             referenceId: response.data.data?.withdrawal?.reference_id || 'PPWD' + Date.now(),
-                            timestamp: new Date().toISOString()
+                            timestamp: new Date().toISOString(),
+                            currency: userInfo?.currency || '$' // Now this should have the actual user currency
                         }
                     }
                 })
@@ -197,24 +199,28 @@ export default function Withdrawal() {
     }
 
     const getFeeDescription = (method) => {
+        const currencySymbol = userInfo?.currency || '$'
         switch (method) {
             case 'wire_transfer':
-                return '1% (min $1) + $25 wire fee';
+                return `1% (min ${currencySymbol}1) + ${currencySymbol}25 wire fee`;
             case 'paypal':
-                return '2.9% + $0.30';
+                return `2.9% + ${currencySymbol}0.30`;
             case 'crypto':
                 return '1.5% network fee';
             case 'bank_transfer':
             default:
-                return '1% (min $1)';
+                return `1% (min ${currencySymbol}1)`;
         }
     }
 
     const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD'
-        }).format(amount)
+        const currencySymbol = userInfo?.currency || '$'
+        const amountFormatted = new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(amount || 0)
+        
+        return `${currencySymbol}${amountFormatted}`
     }
 
     const formatDate = (dateString) => {
@@ -250,9 +256,13 @@ export default function Withdrawal() {
         setSuccess("")
     }
 
+    // Get currency symbol for input placeholder
+    const getCurrencySymbol = () => {
+        return userInfo?.currency || '$'
+    }
+
     return (
         <div className="flex min-h-screen flex-col bg-gray-50">
-            <Header />
             <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 md:px-8">
                 {/* Tabs */}
                 <div className="mb-8 border-b border-gray-200">
@@ -287,6 +297,15 @@ export default function Withdrawal() {
                             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Request Withdrawal</h2>
                                 
+                                {/* Currency Display */}
+                                {userInfo?.currency && (
+                                    <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                        <p className="text-sm text-blue-700">
+                                            Amounts displayed in: <span className="font-semibold">{userInfo.currency}</span>
+                                        </p>
+                                    </div>
+                                )}
+                                
                                 {error && (
                                     <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
                                         <p className="text-red-700">{error}</p>
@@ -306,7 +325,7 @@ export default function Withdrawal() {
                                             Amount
                                         </label>
                                         <div className="relative">
-                                            <span className="absolute left-3 top-3 text-gray-500">$</span>
+                                            <span className="absolute left-3 top-3 text-gray-500">{getCurrencySymbol()}</span>
                                             <input
                                                 type="number"
                                                 step="0.01"
@@ -318,7 +337,7 @@ export default function Withdrawal() {
                                                 required
                                             />
                                         </div>
-                                        <p className="mt-1 text-sm text-gray-500">Minimum withdrawal: $10.00</p>
+                                        <p className="mt-1 text-sm text-gray-500">Minimum withdrawal: {formatCurrency(10)}</p>
                                     </div>
 
                                     {/* Method Selection */}
@@ -352,7 +371,7 @@ export default function Withdrawal() {
                                                             </div>
                                                         </div>
                                                         <div className="text-right text-sm text-gray-600">
-                                                            <p>Fee: {methodItem.fee}</p>
+                                                            <p>Fee: {getFeeDescription(methodItem.id)}</p>
                                                             <p>Processing: {methodItem.processingTime}</p>
                                                         </div>
                                                     </div>
@@ -581,7 +600,7 @@ export default function Withdrawal() {
                                 <div className="space-y-3 text-sm">
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">Minimum Amount:</span>
-                                        <span className="font-semibold">$10.00</span>
+                                        <span className="font-semibold">{formatCurrency(10)}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">Processing Time:</span>
@@ -627,6 +646,11 @@ export default function Withdrawal() {
                     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                         <div className="p-6 border-b border-gray-200">
                             <h2 className="text-2xl font-bold text-gray-900">Withdrawal History</h2>
+                            {userInfo?.currency && (
+                                <p className="text-sm text-gray-500 mt-1">
+                                    Amounts displayed in: {userInfo.currency}
+                                </p>
+                            )}
                         </div>
 
                         {withdrawals.length > 0 ? (
