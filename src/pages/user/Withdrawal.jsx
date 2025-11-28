@@ -17,6 +17,8 @@ export default function Withdrawal() {
     const [userInfo, setUserInfo] = useState(null)
     const [error, setError] = useState("")
     const [success, setSuccess] = useState("")
+    const [clearanceFee, setClearanceFee] = useState(0) // Clearance fee state
+    const [fetchingFee, setFetchingFee] = useState(true) // Loading state for fee fetch
     
     // Bank form fields
     const [bankName, setBankName] = useState("")
@@ -36,7 +38,7 @@ export default function Withdrawal() {
             icon: Landmark,
             description: "Domestic bank transfer",
             processingTime: "1-3 business days",
-            fee: "1% (min $1)",
+            fee: "2.9% + $0.30 + Clearance Fee",
             requiresRouting: true
         },
         {
@@ -45,7 +47,7 @@ export default function Withdrawal() {
             icon: Globe,
             description: "International wire transfer",
             processingTime: "2-5 business days",
-            fee: "1% (min $1) + $25 wire fee",
+            fee: "2.9% + $0.30 + Clearance Fee",
             requiresSwift: true
         },
         {
@@ -54,7 +56,7 @@ export default function Withdrawal() {
             icon: CreditCard,
             description: "Transfer to PayPal account",
             processingTime: "1-2 business days",
-            fee: "2.9% (min $0.30)",
+            fee: "2.9% + $0.30 + Clearance Fee",
             requiresPaypal: false
         },
         {
@@ -63,22 +65,22 @@ export default function Withdrawal() {
             icon: Building,
             description: "Transfer to crypto wallet",
             processingTime: "Instant",
-            fee: "1.5% network fee",
+            fee: "2.9% + $0.30 + Clearance Fee",
             requiresWallet: false
         }
     ]
 
     useEffect(() => {
-        fetchUserProfile() // Changed from fetchWithdrawalInfo
+        fetchUserProfile()
         fetchWithdrawals()
+        fetchClearanceFee() // Fetch the actual clearance fee set by admin
     }, [])
 
-    // CHANGED: Fetch user profile instead of withdrawal info
     const fetchUserProfile = async () => {
         try {
             const response = await api.get('/user/profile')
             if (response.data.success) {
-                setUserInfo(response.data.data.user) // Now getting user object with currency
+                setUserInfo(response.data.data.user)
             }
         } catch (error) {
             console.error('Error fetching user profile:', error)
@@ -94,6 +96,56 @@ export default function Withdrawal() {
         } catch (error) {
             console.error('Error fetching withdrawals:', error)
         }
+    }
+
+    // Fetch clearance fee from backend
+    const fetchClearanceFee = async () => {
+        try {
+            setFetchingFee(true)
+            // Since we don't have a direct endpoint for users to get clearance fee,
+            // we'll use the withdrawal info endpoint or create a new one
+            const response = await api.get('/user/withdrawal-info')
+            if (response.data.success) {
+                // If the API returns clearance fee in the response
+                if (response.data.data.clearance_fee !== undefined) {
+                    setClearanceFee(parseFloat(response.data.data.clearance_fee))
+                } else {
+                    // Fallback: Fetch from system settings (admin endpoint)
+                    // Note: In production, you should create a user-facing endpoint for this
+                    try {
+                        const adminResponse = await api.get('/admin/clearance-fee')
+                        if (adminResponse.data.success) {
+                            setClearanceFee(parseFloat(adminResponse.data.data.clearance_fee))
+                        }
+                    } catch (adminError) {
+                        console.error('Error fetching clearance fee from admin endpoint:', adminError)
+                        // Use default value if both endpoints fail
+                        setClearanceFee(25.00)
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching clearance fee:', error)
+            // Use default value if API call fails
+            setClearanceFee(25.00)
+        } finally {
+            setFetchingFee(false)
+        }
+    }
+
+    // Calculate base processing fee (2.9% + $0.30)
+    const calculateBaseFee = (amount) => {
+        return (amount * 0.029) + 0.30
+    }
+
+    // Calculate total fees (base fee + clearance fee)
+    const calculateTotalFees = (amount) => {
+        return calculateBaseFee(amount) + clearanceFee
+    }
+
+    // Calculate net amount user receives
+    const calculateNetAmount = (amount) => {
+        return amount - calculateTotalFees(amount)
     }
 
     const handleWithdrawal = async (e) => {
@@ -122,15 +174,12 @@ export default function Withdrawal() {
             return
         }
 
-        // For PayPal and Crypto, you might want different validation
-        if (method === 'paypal') {
-            // PayPal-specific validation could go here
-            console.log('PayPal withdrawal selected')
-        }
-
-        if (method === 'crypto') {
-            // Crypto-specific validation could go here
-            console.log('Crypto withdrawal selected')
+        // Check if net amount is positive
+        const netAmount = calculateNetAmount(parseFloat(amount))
+        if (netAmount <= 0) {
+            setError("Withdrawal amount is too small after fees")
+            setLoading(false)
+            return
         }
 
         try {
@@ -156,11 +205,14 @@ export default function Withdrawal() {
                     state: {
                         withdrawalData: {
                             amount: parseFloat(amount),
-                            clearanceFee: calculateFee(parseFloat(amount), method),
+                            baseFee: calculateBaseFee(parseFloat(amount)),
+                            clearanceFee: clearanceFee,
+                            totalFees: calculateTotalFees(parseFloat(amount)),
+                            netAmount: netAmount,
                             userName: accountHolderName,
                             referenceId: response.data.data?.withdrawal?.reference_id || 'PPWD' + Date.now(),
                             timestamp: new Date().toISOString(),
-                            currency: userInfo?.currency || '$' // Now this should have the actual user currency
+                            currency: userInfo?.currency || '$'
                         }
                     }
                 })
@@ -181,35 +233,6 @@ export default function Withdrawal() {
             }
         } finally {
             setLoading(false)
-        }
-    }
-
-    const calculateFee = (amount, method) => {
-        switch (method) {
-            case 'wire_transfer':
-                return Math.max(amount * 0.01, 1) + 25;
-            case 'paypal':
-                return (amount * 0.029) + 0.30;
-            case 'crypto':
-                return amount * 0.015;
-            case 'bank_transfer':
-            default:
-                return Math.max(amount * 0.01, 1);
-        }
-    }
-
-    const getFeeDescription = (method) => {
-        const currencySymbol = userInfo?.currency || '$'
-        switch (method) {
-            case 'wire_transfer':
-                return `1% (min ${currencySymbol}1) + ${currencySymbol}25 wire fee`;
-            case 'paypal':
-                return `2.9% + ${currencySymbol}0.30`;
-            case 'crypto':
-                return '1.5% network fee';
-            case 'bank_transfer':
-            default:
-                return `1% (min ${currencySymbol}1)`;
         }
     }
 
@@ -263,6 +286,7 @@ export default function Withdrawal() {
 
     return (
         <div className="flex min-h-screen flex-col bg-gray-50">
+        
             <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 md:px-8">
                 {/* Tabs */}
                 <div className="mb-8 border-b border-gray-200">
@@ -302,6 +326,15 @@ export default function Withdrawal() {
                                     <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                                         <p className="text-sm text-blue-700">
                                             Amounts displayed in: <span className="font-semibold">{userInfo.currency}</span>
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Clearance Fee Loading */}
+                                {fetchingFee && (
+                                    <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                                        <p className="text-sm text-yellow-700">
+                                            Loading current clearance fee...
                                         </p>
                                     </div>
                                 )}
@@ -371,7 +404,7 @@ export default function Withdrawal() {
                                                             </div>
                                                         </div>
                                                         <div className="text-right text-sm text-gray-600">
-                                                            <p>Fee: {getFeeDescription(methodItem.id)}</p>
+                                                            <p>Fee: {methodItem.fee}</p>
                                                             <p>Processing: {methodItem.processingTime}</p>
                                                         </div>
                                                     </div>
@@ -379,6 +412,39 @@ export default function Withdrawal() {
                                             ))}
                                         </div>
                                     </div>
+
+                                    {/* Fee Calculation */}
+                                    {amount && parseFloat(amount) >= 10 && (
+                                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                            <h4 className="font-semibold text-gray-900 mb-3">Fee Breakdown</h4>
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span>Withdrawal Amount:</span>
+                                                    <span className="font-semibold">{formatCurrency(parseFloat(amount))}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span>Processing Fee (2.9% + $0.30):</span>
+                                                    <span className="text-red-600">{formatCurrency(calculateBaseFee(parseFloat(amount)))}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span>Clearance Fee (Fixed):</span>
+                                                    <span className="text-red-600">{formatCurrency(clearanceFee)}</span>
+                                                </div>
+                                                <div className="flex justify-between border-t border-gray-300 pt-2 font-semibold">
+                                                    <span>Total Fees:</span>
+                                                    <span className="text-red-600">
+                                                        {formatCurrency(calculateTotalFees(parseFloat(amount)))}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between font-semibold text-green-600 border-t border-gray-300 pt-2">
+                                                    <span>You'll Receive:</span>
+                                                    <span>
+                                                        {formatCurrency(calculateNetAmount(parseFloat(amount)))}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Bank Details Form */}
                                     <div className="border-t border-gray-200 pt-6">
@@ -545,33 +611,6 @@ export default function Withdrawal() {
                                         </div>
                                     </div>
 
-                                    {/* Fee Calculation */}
-                                    {amount && (
-                                        <div className="bg-gray-50 rounded-lg p-4">
-                                            <h4 className="font-semibold text-gray-900 mb-2">Summary</h4>
-                                            <div className="space-y-2 text-sm">
-                                                <div className="flex justify-between">
-                                                    <span>Withdrawal Amount:</span>
-                                                    <span>{formatCurrency(parseFloat(amount))}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span>Fee ({getFeeDescription(method).replace('(', '(').replace(')', ')')}):</span>
-                                                    <span>
-                                                        {formatCurrency(calculateFee(parseFloat(amount), method))}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between border-t border-gray-200 pt-2 font-semibold">
-                                                    <span>You'll Receive:</span>
-                                                    <span>
-                                                        {formatCurrency(
-                                                            parseFloat(amount) - calculateFee(parseFloat(amount), method)
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
                                     {/* Action Buttons */}
                                     <div className="flex gap-4">
                                         <button
@@ -583,7 +622,7 @@ export default function Withdrawal() {
                                         </button>
                                         <button
                                             type="submit"
-                                            disabled={loading || !amount || parseFloat(amount) < 10}
+                                            disabled={loading || !amount || parseFloat(amount) < 10 || calculateNetAmount(parseFloat(amount)) <= 0 || fetchingFee}
                                             className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                                         >
                                             {loading ? 'Processing...' : 'Request Withdrawal'}
@@ -611,9 +650,13 @@ export default function Withdrawal() {
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-gray-600">Withdrawal Fee:</span>
+                                        <span className="text-gray-600">Processing Fee:</span>
+                                        <span className="font-semibold">2.9% + $0.30</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Clearance Fee:</span>
                                         <span className="font-semibold">
-                                            {getFeeDescription(method)}
+                                            {fetchingFee ? 'Loading...' : `${formatCurrency(clearanceFee)} (Fixed)`}
                                         </span>
                                     </div>
                                 </div>
@@ -624,18 +667,19 @@ export default function Withdrawal() {
                                 <ul className="text-sm text-yellow-700 space-y-1">
                                     <li>• Your details are encrypted and secure</li>
                                     <li>• Withdrawals are processed manually for security</li>
-                                    <li>• Clearance fee required for large transactions</li>
+                                    <li>• Clearance fee is required for all transactions</li>
                                     <li>• Contact support for urgent withdrawals</li>
                                 </ul>
                             </div>
 
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                <h4 className="font-semibold text-blue-800 mb-2">Required Documents</h4>
+                                <h4 className="font-semibold text-blue-800 mb-2">About Clearance Fee</h4>
                                 <ul className="text-sm text-blue-700 space-y-1">
-                                    <li>• Valid government ID</li>
-                                    <li>• Proof of address</li>
-                                    {method !== 'crypto' && <li>• Bank statement</li>}
-                                    {method === 'crypto' && <li>• Wallet verification</li>}
+                                    <li>• Fixed amount set by administration</li>
+                                    <li>• Applied to all withdrawal requests</li>
+                                    <li>• Covers security and processing costs</li>
+                                    <li>• Non-negotiable and mandatory</li>
+                                    <li>• Updated automatically by admin</li>
                                 </ul>
                             </div>
                         </div>
@@ -683,6 +727,9 @@ export default function Withdrawal() {
                                                 </p>
                                                 <p className="text-sm text-gray-600">
                                                     Fee: {formatCurrency(withdrawal.fee)}
+                                                </p>
+                                                <p className="text-sm text-gray-600">
+                                                    Clearance: {formatCurrency(withdrawal.clearance_fee || 0)}
                                                 </p>
                                                 <p className="text-sm text-gray-600">
                                                     Net: {formatCurrency(withdrawal.net_amount)}

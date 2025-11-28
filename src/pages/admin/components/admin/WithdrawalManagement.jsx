@@ -15,6 +15,7 @@ export default function WithdrawalManagement() {
   const [selectedWithdrawal, setSelectedWithdrawal] = useState(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showClearanceFeeModal, setShowClearanceFeeModal] = useState(false)
   const [stats, setStats] = useState(null)
 
   useEffect(() => {
@@ -76,6 +77,23 @@ export default function WithdrawalManagement() {
     }
   }
 
+  const handleClearanceFeeUpdate = async (withdrawalId, clearanceFee) => {
+    try {
+      const response = await api.put(`/admin/withdrawals/${withdrawalId}/clearance-fee`, {
+        clearance_fee: clearanceFee
+      })
+
+      if (response.data.success) {
+        alert('Clearance fee updated successfully!')
+        setShowClearanceFeeModal(false)
+        fetchWithdrawals()
+      }
+    } catch (error) {
+      console.error('Failed to update clearance fee:', error)
+      alert('Failed to update clearance fee')
+    }
+  }
+
   const handleDeleteWithdrawal = async (withdrawalId) => {
     if (!confirm('Are you sure you want to delete this withdrawal? This action cannot be undone.')) {
       return
@@ -94,18 +112,21 @@ export default function WithdrawalManagement() {
     }
   }
 
-  const handleFeesUpdate = async (withdrawalId, fees) => {
-    try {
-      const response = await api.put(`/admin/withdrawals/${withdrawalId}/fees`, fees)
-      if (response.data.success) {
-        alert('Fees updated successfully!')
-        setShowEditModal(false)
-        fetchWithdrawals()
-      }
-    } catch (error) {
-      console.error('Failed to update fees:', error)
-      alert('Failed to update fees')
-    }
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount || 0)
+  }
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
   const getStatusColor = (status) => {
@@ -117,28 +138,6 @@ export default function WithdrawalManagement() {
       cancelled: 'bg-gray-100 text-gray-800'
     }
     return colors[status] || 'bg-gray-100 text-gray-800'
-  }
-  const formatCurrency = (amount) => {
-    const currencySymbol = user?.currency || '$'
-    
-    // Format the number with proper decimal places
-    const amountFormatted = new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount || 0)
-    
-    // Return the currency symbol + formatted amount
-    return `${currencySymbol}${amountFormatted}`
-  }
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
   }
 
   return (
@@ -318,12 +317,12 @@ export default function WithdrawalManagement() {
                           <button
                             onClick={() => {
                               setSelectedWithdrawal(withdrawal)
-                              setShowEditModal(true)
+                              setShowClearanceFeeModal(true)
                             }}
-                            className="text-green-600 hover:text-green-900 p-1 rounded transition-colors"
-                            title="Edit Withdrawal"
+                            className="text-purple-600 hover:text-purple-900 p-1 rounded transition-colors"
+                            title="Set Clearance Fee"
                           >
-                            <Edit size={16} />
+                            <DollarSign size={16} />
                           </button>
                           {withdrawal.status === 'pending' && (
                             <button
@@ -376,360 +375,82 @@ export default function WithdrawalManagement() {
         )}
       </div>
 
-      {/* Detail Modal */}
-      {showDetailModal && selectedWithdrawal && (
-        <WithdrawalDetailModal
+      {/* Clearance Fee Modal */}
+      {showClearanceFeeModal && selectedWithdrawal && (
+        <ClearanceFeeModal
           withdrawal={selectedWithdrawal}
           onClose={() => {
-            setShowDetailModal(false)
+            setShowClearanceFeeModal(false)
             setSelectedWithdrawal(null)
           }}
-          onStatusUpdate={handleStatusUpdate}
-        />
-      )}
-
-      {/* Edit Modal */}
-      {showEditModal && selectedWithdrawal && (
-        <WithdrawalEditModal
-          withdrawal={selectedWithdrawal}
-          onClose={() => {
-            setShowEditModal(false)
-            setSelectedWithdrawal(null)
-          }}
-          onFeesUpdate={handleFeesUpdate}
-          onStatusUpdate={handleStatusUpdate}
+          onUpdate={handleClearanceFeeUpdate}
         />
       )}
     </div>
   )
 }
 
-// Detail Modal Component
-function WithdrawalDetailModal({ withdrawal, onClose, onStatusUpdate }) {  const formatCurrency = (amount) => {
-    const currencySymbol = user?.currency || '$'
-    
-    // Format the number with proper decimal places
-    const amountFormatted = new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount || 0)
-    
-    // Return the currency symbol + formatted amount
-    return `${currencySymbol}${amountFormatted}`
-  }
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A'
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Withdrawal Details</h3>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-              ×
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6 space-y-6">
-          {/* Basic Information */}
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-3">Basic Information</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-gray-600">Reference ID:</span>
-                <p className="font-mono font-semibold">{withdrawal.reference_id}</p>
-              </div>
-              <div>
-                <span className="text-gray-600">User:</span>
-                <p className="font-semibold">{withdrawal.user?.name} ({withdrawal.user?.email})</p>
-              </div>
-              <div>
-                <span className="text-gray-600">Status:</span>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  withdrawal.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                  withdrawal.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                  withdrawal.status === 'completed' ? 'bg-green-100 text-green-800' :
-                  'bg-red-100 text-red-800'
-                }`}>
-                  {withdrawal.status}
-                </span>
-              </div>
-              <div>
-                <span className="text-gray-600">Method:</span>
-                <p className="font-semibold capitalize">{withdrawal.method.replace('_', ' ')}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Amount Details */}
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-3">Amount Details</h4>
-            <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Withdrawal Amount:</span>
-                <span className="font-semibold">{formatCurrency(withdrawal.amount)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Processing Fee:</span>
-                <span className="text-red-600">{formatCurrency(withdrawal.fee)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Clearance Fee:</span>
-                <span className="text-red-600">{formatCurrency(withdrawal.clearance_fee || 0)}</span>
-              </div>
-              <div className="flex justify-between border-t border-gray-200 pt-2 font-semibold">
-                <span>Net Amount:</span>
-                <span className="text-green-600">{formatCurrency(withdrawal.net_amount)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Bank Details */}
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-3">Bank Details</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-gray-600">Bank Name:</span>
-                <p className="font-semibold">{withdrawal.bank_name}</p>
-              </div>
-              <div>
-                <span className="text-gray-600">Account Holder:</span>
-                <p className="font-semibold">{withdrawal.account_holder_name}</p>
-              </div>
-              <div>
-                <span className="text-gray-600">Account Number:</span>
-                <p className="font-mono">{withdrawal.account_number}</p>
-              </div>
-              <div>
-                <span className="text-gray-600">Bank Country:</span>
-                <p className="font-semibold">{withdrawal.bank_country}</p>
-              </div>
-              {withdrawal.routing_number && (
-                <div>
-                  <span className="text-gray-600">Routing Number:</span>
-                  <p className="font-mono">{withdrawal.routing_number}</p>
-                </div>
-              )}
-              {withdrawal.swift_code && (
-                <div>
-                  <span className="text-gray-600">SWIFT Code:</span>
-                  <p className="font-mono">{withdrawal.swift_code}</p>
-                </div>
-              )}
-              {withdrawal.iban && (
-                <div>
-                  <span className="text-gray-600">IBAN:</span>
-                  <p className="font-mono">{withdrawal.iban}</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Timestamps */}
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-3">Timestamps</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-gray-600">Created:</span>
-                <p>{formatDate(withdrawal.created_at)}</p>
-              </div>
-              <div>
-                <span className="text-gray-600">Processed:</span>
-                <p>{formatDate(withdrawal.processed_at)}</p>
-              </div>
-              <div>
-                <span className="text-gray-600">Completed:</span>
-                <p>{formatDate(withdrawal.completed_at)}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Admin Notes */}
-          {withdrawal.admin_notes && (
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3">Admin Notes</h4>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-sm text-yellow-800">{withdrawal.admin_notes}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Status Actions */}
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-3">Update Status</h4>
-            <div className="flex flex-wrap gap-2">
-              {withdrawal.status !== 'processing' && (
-                <button
-                  onClick={() => onStatusUpdate(withdrawal.id, 'processing')}
-                  className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
-                >
-                  Mark as Processing
-                </button>
-              )}
-              {withdrawal.status !== 'completed' && (
-                <button
-                  onClick={() => onStatusUpdate(withdrawal.id, 'completed')}
-                  className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors"
-                >
-                  Mark as Completed
-                </button>
-              )}
-              {withdrawal.status !== 'failed' && (
-                <button
-                  onClick={() => onStatusUpdate(withdrawal.id, 'failed')}
-                  className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors"
-                >
-                  Mark as Failed
-                </button>
-              )}
-              {withdrawal.status !== 'cancelled' && (
-                <button
-                  onClick={() => onStatusUpdate(withdrawal.id, 'cancelled')}
-                  className="px-3 py-2 bg-gray-600 text-white rounded-lg text-sm hover:bg-gray-700 transition-colors"
-                >
-                  Cancel Withdrawal
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 border-t border-gray-200 bg-gray-50">
-          <button
-            onClick={onClose}
-            className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Edit Modal Component
-function WithdrawalEditModal({ withdrawal, onClose, onFeesUpdate, onStatusUpdate }) {
-  const [formData, setFormData] = useState({
-    fee: withdrawal.fee,
-    clearance_fee: withdrawal.clearance_fee || 0,
-    admin_notes: withdrawal.admin_notes || ''
-  })
+// Clearance Fee Modal Component
+function ClearanceFeeModal({ withdrawal, onClose, onUpdate }) {
+  const [clearanceFee, setClearanceFee] = useState(withdrawal.clearance_fee || "0.00")
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    await onFeesUpdate(withdrawal.id, formData)
+    await onUpdate(withdrawal.id, parseFloat(clearanceFee))
     setLoading(false)
   }
 
-  const handleChange = (e) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }))
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount || 0)
   }
-
-  const netAmount = withdrawal.amount - parseFloat(formData.fee) - parseFloat(formData.clearance_fee)
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-md w-full">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Edit Withdrawal</h3>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-              ×
-            </button>
-          </div>
+      <div className="bg-white rounded-lg max-w-md w-full p-6">
+        <h3 className="text-lg font-semibold mb-4">Set Clearance Fee</h3>
+        
+        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+          <p className="text-sm text-gray-700">
+            Withdrawal: <strong>{withdrawal.reference_id}</strong>
+          </p>
+          <p className="text-sm text-gray-700">
+            Amount: <strong>{formatCurrency(withdrawal.amount)}</strong>
+          </p>
+          <p className="text-sm text-gray-700">
+            Current Fee: <strong>{formatCurrency(withdrawal.fee)}</strong>
+          </p>
+          <p className="text-sm text-gray-700">
+            Current Net Amount: <strong>{formatCurrency(withdrawal.net_amount)}</strong>
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Amount Summary */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h4 className="font-semibold text-gray-900 mb-2">Amount Summary</h4>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span>Withdrawal Amount:</span>
-                <span className="font-semibold">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(withdrawal.amount)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Net Amount:</span>
-                <span className="font-semibold text-green-600">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(netAmount)}
-                </span>
-              </div>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Clearance Fee ($)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={clearanceFee}
+                onChange={(e) => setClearanceFee(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                New net amount will be: {formatCurrency(withdrawal.amount - withdrawal.fee - parseFloat(clearanceFee))}
+              </p>
             </div>
           </div>
 
-          {/* Fee Inputs */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Processing Fee
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              name="fee"
-              value={formData.fee}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Clearance Fee
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              name="clearance_fee"
-              value={formData.clearance_fee}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Admin Notes
-            </label>
-            <textarea
-              name="admin_notes"
-              value={formData.admin_notes}
-              onChange={handleChange}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Add any notes or comments..."
-            />
-          </div>
-
-          {/* Validation */}
-          {netAmount < 0 && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              Total fees cannot exceed withdrawal amount
-            </div>
-          )}
-
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex justify-end space-x-3 mt-6">
             <button
               type="button"
               onClick={onClose}
@@ -739,10 +460,10 @@ function WithdrawalEditModal({ withdrawal, onClose, onFeesUpdate, onStatusUpdate
             </button>
             <button
               type="submit"
-              disabled={loading || netAmount < 0}
+              disabled={loading}
               className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
-              {loading ? 'Updating...' : 'Update Fees'}
+              {loading ? 'Updating...' : 'Update Fee'}
             </button>
           </div>
         </form>

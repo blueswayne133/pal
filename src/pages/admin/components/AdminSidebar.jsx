@@ -24,43 +24,54 @@ export default function AdminSidebar({
     { id: "users", label: "User Management", icon: Users },
     { id: "withdrawals", label: "Withdrawal Management", icon: DollarSign }, 
     { id: "transactions", label: "Transactions", icon: CreditCard },
+    { id: "settings", label: "Settings", icon: Settings },
     { id: "email", label: "Email Management", icon: Mail },
   ]
 
   return (
-    <div className={`bg-white shadow-sm border-r border-gray-200 transition-all duration-300 flex flex-col ${
-      collapsed ? 'w-16' : 'w-64'
+    <div className={`bg-white shadow-xl border-r border-gray-200/60 transition-all duration-300 flex flex-col backdrop-blur-sm bg-white/95 ${
+      collapsed ? 'w-20' : 'w-80'
     }`}>
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-6 border-b border-gray-200/60">
         {!collapsed && (
-          <div className="flex items-center">
-            <img src="/logo.png" alt="PayPal" className="h-8 w-auto" />
-            <span className="ml-2 text-lg font-semibold text-gray-900">Admin</span>
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-700 rounded-lg flex items-center justify-center shadow-sm">
+              <img src="/logo.png" alt="PayPal" className="h-6 w-6" />
+            </div>
+            <div>
+              <span className="text-lg font-bold text-gray-900">Admin</span>
+              <p className="text-xs text-gray-500">Control Panel</p>
+            </div>
           </div>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
+          className="p-2 rounded-xl hover:bg-gray-100 transition-all duration-200 hover:scale-105"
         >
           {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
         </button>
       </div>
 
-      <nav className="flex-1 p-2">
+      <nav className="flex-1 p-4">
         {menuItems.map((item) => {
           const Icon = item.icon
+          const isActive = activeSection === item.id
           return (
             <button
               key={item.id}
               onClick={() => setActiveSection(item.id)}
-              className={`w-full flex items-center rounded-lg px-3 py-3 mb-1 transition-colors ${
-                activeSection === item.id
-                  ? 'bg-blue-50 text-blue-600 border border-blue-200'
-                  : 'text-gray-700 hover:bg-gray-50'
+              className={`w-full flex items-center rounded-2xl px-4 py-4 mb-2 transition-all duration-200 group ${
+                isActive
+                  ? 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border border-blue-200 shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm'
               }`}
             >
-              <Icon size={20} />
-              {!collapsed && <span className="ml-3 font-medium">{item.label}</span>}
+              <Icon size={22} className={isActive ? "text-blue-600" : "text-gray-400 group-hover:text-gray-600"} />
+              {!collapsed && (
+                <span className={`ml-4 font-semibold transition-all ${isActive ? 'text-blue-700' : 'group-hover:text-gray-900'}`}>
+                  {item.label}
+                </span>
+              )}
             </button>
           )
         })}
@@ -68,10 +79,10 @@ export default function AdminSidebar({
 
       {/* Back button when viewing user detail */}
       {selectedUser && !collapsed && (
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-gray-200/60">
           <button
             onClick={() => setActiveSection("users")}
-            className="w-full flex items-center justify-center px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors"
+            className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-2xl border border-gray-200 transition-all duration-200 hover:shadow-sm"
           >
             ← Back to Users
           </button>
@@ -80,10 +91,10 @@ export default function AdminSidebar({
 
       {/* Settings */}
       {!collapsed && (
-        <div className="p-4 border-t border-gray-200">
-          <button className="w-full flex items-center px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors">
-            <Settings size={16} className="mr-2" />
-            Settings
+        <div className="p-4 border-t border-gray-200/60">
+          <button className="w-full flex items-center px-4 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-2xl transition-all duration-200 group">
+            <Settings size={18} className="mr-3 text-gray-400 group-hover:text-gray-600" />
+            System Settings
           </button>
         </div>
       )}

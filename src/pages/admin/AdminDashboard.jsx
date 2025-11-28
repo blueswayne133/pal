@@ -8,11 +8,12 @@ import UserManagement from "./components/admin/UserManagement"
 import TransactionManagement from "./components/admin/TransactionManagement"
 import EmailManagement from "./components/admin/EmailManagement"
 import UserDetail from "./components/admin/UserDetail"
+import WithdrawalManagement from "./components/admin/WithdrawalManagement"
+import WithdrawalSettings from "./components/admin/WithdrawalSettings"
 import api from "../../utils/api"
 import AdminSidebar from "./components/AdminSidebar"
 import AdminHeader from "./components/AdminHeader"
 import { getAdminFromLocalStorage } from "../../utils/localStorage"
-import WithdrawalManagement from "./components/admin/WithdrawalManagement"
 
 export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState("dashboard")
@@ -43,8 +44,11 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading Admin Panel...</p>
+        </div>
       </div>
     )
   }
@@ -63,13 +67,15 @@ export default function AdminDashboard() {
         return <WithdrawalManagement />
       case "email":
         return <EmailManagement />
+      case "settings":
+        return <WithdrawalSettings />
       default:
         return <DashboardOverview />
     }
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <AdminSidebar 
         activeSection={activeSection} 
         setActiveSection={setActiveSection}
@@ -79,8 +85,10 @@ export default function AdminDashboard() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <AdminHeader admin={admin} />
         
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6">
-          {renderContent()}
+        <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto">
+            {renderContent()}
+          </div>
         </main>
       </div>
     </div>

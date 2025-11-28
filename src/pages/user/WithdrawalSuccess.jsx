@@ -90,7 +90,7 @@ export default function WithdrawalSuccess() {
 
     return (
         <div className="flex min-h-screen flex-col bg-gray-50">
-            <Header />
+       
 
             <main className="flex-1 bg-gradient-to-b from-blue-50 to-white">
                 <div className="max-w-4xl mx-auto px-4 py-8">
