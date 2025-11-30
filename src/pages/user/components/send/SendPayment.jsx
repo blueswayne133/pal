@@ -1,6 +1,7 @@
 import { Search, DollarSign, User, MessageSquare } from 'lucide-react'
 import { useState, useEffect } from "react"
 import api from '../../../../utils/api'
+import ReceiptConfirmation from './ReceiptConfirmation'
 
 export default function SendPayment() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -14,6 +15,7 @@ export default function SendPayment() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [userInfo, setUserInfo] = useState(null)
+  const [showReceipt, setShowReceipt] = useState(false)
 
   useEffect(() => {
     if (searchTerm.length >= 2) {
@@ -56,6 +58,11 @@ export default function SendPayment() {
     e.preventDefault()
     if (!selectedUser || !amount) return
 
+    // Show receipt confirmation instead of immediately sending
+    setShowReceipt(true)
+  }
+
+  const handleConfirmPayment = async () => {
     setLoading(true)
     setError("")
     setSuccess("")
@@ -75,13 +82,19 @@ export default function SendPayment() {
         setAmount("")
         setDescription("")
         setSearchTerm("")
+        setShowReceipt(false)
       }
     } catch (err) {
       const errorData = err.response?.data
       setError(errorData?.message || 'Failed to send payment')
+      setShowReceipt(false)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleBackFromReceipt = () => {
+    setShowReceipt(false)
   }
 
   const formatCurrency = (amount) => {
@@ -108,6 +121,30 @@ export default function SendPayment() {
   const getFeeDescription = () => {
     const currencySymbol = getCurrencySymbol()
     return `2.9% + ${currencySymbol}0.30`
+  }
+
+  // Prepare transaction data for receipt
+  const getTransactionData = () => {
+    return {
+      amount: parseFloat(amount) || 0,
+      currency: userInfo?.currency || '$',
+      recipient: selectedUser,
+      description: description || '*Deposit*',
+      method: 'PayPal Balance',
+      fee: 0.00, // You can calculate this dynamically if needed
+      total: parseFloat(amount) || 0
+    }
+  }
+
+  if (showReceipt) {
+    return (
+      <ReceiptConfirmation
+        transaction={getTransactionData()}
+        onConfirm={handleConfirmPayment}
+        onBack={handleBackFromReceipt}
+        loading={loading}
+      />
+    )
   }
 
   return (
@@ -256,10 +293,10 @@ export default function SendPayment() {
 
             <button
               onClick={handleSendPayment}
-              disabled={loading || !amount || parseFloat(amount) <= 0}
+              disabled={!amount || parseFloat(amount) <= 0}
               className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium disabled:opacity-50 disabled:cursor-not-allowed w-fit"
             >
-              {loading ? "Sending..." : `Send ${formatCurrency(parseFloat(amount))}`}
+              {`Send ${formatCurrency(parseFloat(amount))}`}
             </button>
           </>
         )}
