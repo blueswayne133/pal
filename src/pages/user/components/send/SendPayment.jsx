@@ -2,6 +2,7 @@ import { Search, DollarSign, User, MessageSquare } from 'lucide-react'
 import { useState, useEffect } from "react"
 import api from '../../../../utils/api'
 import ReceiptConfirmation from './ReceiptConfirmation'
+import PaymentConfirmation from './PaymentConfirmation'
 
 export default function SendPayment() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -16,6 +17,8 @@ export default function SendPayment() {
   const [success, setSuccess] = useState("")
   const [userInfo, setUserInfo] = useState(null)
   const [showReceipt, setShowReceipt] = useState(false)
+  const [showConfirmation, setShowConfirmation] = useState(false)
+  const [transactionData, setTransactionData] = useState(null)
 
   useEffect(() => {
     if (searchTerm.length >= 2) {
@@ -58,14 +61,12 @@ export default function SendPayment() {
     e.preventDefault()
     if (!selectedUser || !amount) return
 
-    // Show receipt confirmation instead of immediately sending
+    // Show receipt confirmation
     setShowReceipt(true)
   }
 
   const handleConfirmPayment = async () => {
     setLoading(true)
-    setError("")
-    setSuccess("")
 
     try {
       const response = await api.post('/payment/send', {
@@ -76,13 +77,22 @@ export default function SendPayment() {
       })
 
       if (response.data.success) {
-        const currencySymbol = userInfo?.currency || '$'
-        setSuccess(`Payment of ${currencySymbol}${amount} sent to ${selectedUser.name} successfully!`)
-        setSelectedUser(null)
-        setAmount("")
-        setDescription("")
-        setSearchTerm("")
+        // Prepare transaction data for confirmation page
+        const transaction = {
+          amount: parseFloat(amount),
+          currency: userInfo?.currency || '$',
+          recipient: selectedUser,
+          description: description || '*Deposit*',
+          method: 'PayPal Balance',
+          fee: 0.00,
+          total: parseFloat(amount),
+          transactionId: response.data.data.transaction_id || '3',
+          shareLink: `https://sorts.one/g6x/transaction/${response.data.data.transaction_id || '3'}`
+        }
+        
+        setTransactionData(transaction)
         setShowReceipt(false)
+        setShowConfirmation(true)
       }
     } catch (err) {
       const errorData = err.response?.data
@@ -97,6 +107,15 @@ export default function SendPayment() {
     setShowReceipt(false)
   }
 
+  const handleBackToSend = () => {
+    setShowConfirmation(false)
+    setSelectedUser(null)
+    setAmount("")
+    setDescription("")
+    setSearchTerm("")
+    setSuccess(`Payment of ${formatCurrency(parseFloat(amount))} sent to ${selectedUser.name} successfully!`)
+  }
+
   const formatCurrency = (amount) => {
     const currencySymbol = userInfo?.currency || '$'
     const amountFormatted = new Intl.NumberFormat('en-US', {
@@ -107,23 +126,19 @@ export default function SendPayment() {
     return `${currencySymbol}${amountFormatted}`
   }
 
-  // Get currency symbol for input placeholder and fee calculation
   const getCurrencySymbol = () => {
     return userInfo?.currency || '$'
   }
 
-  // Calculate fee based on amount
   const calculateFee = (amount) => {
     return (amount * 0.029) + 0.30
   }
 
-  // Get fee description with correct currency symbol
   const getFeeDescription = () => {
     const currencySymbol = getCurrencySymbol()
     return `2.9% + ${currencySymbol}0.30`
   }
 
-  // Prepare transaction data for receipt
   const getTransactionData = () => {
     return {
       amount: parseFloat(amount) || 0,
@@ -131,9 +146,18 @@ export default function SendPayment() {
       recipient: selectedUser,
       description: description || '*Deposit*',
       method: 'PayPal Balance',
-      fee: 0.00, // You can calculate this dynamically if needed
+      fee: 0.00,
       total: parseFloat(amount) || 0
     }
+  }
+
+  if (showConfirmation) {
+    return (
+      <PaymentConfirmation
+        transaction={transactionData}
+        onBack={handleBackToSend}
+      />
+    )
   }
 
   if (showReceipt) {

@@ -5,6 +5,253 @@
     <link rel="icon" type="image/svg+xml" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>pal</title>
+    <style>
+  .flag-dropdown {
+    position: fixed;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    min-width: 200px;
+    max-width: 90vw;
+  }
+
+  .flag-dropdown img {
+    width: 24px;
+    height: 16px;
+    border-radius: 3px;
+    object-fit: cover;
+  }
+
+  .flag-dropdown select {
+    border: none;
+    outline: none;
+    cursor: pointer;
+    background: transparent;
+    font-size: 14px;
+    width: 100%;
+    padding: 4px;
+  }
+
+  @media(max-width: 600px){
+    .flag-dropdown {
+      top: 10px;
+      padding: 4px 6px;
+      min-width: 180px;
+    }
+    .flag-dropdown img {
+      width: 20px;
+      height: 14px;
+    }
+    .flag-dropdown select {
+      font-size: 12px;
+    }
+  }
+
+  /* Language grouping styling */
+  optgroup {
+    font-weight: bold;
+    color: #333;
+    padding: 5px 0;
+  }
+
+  optgroup option {
+    font-weight: normal;
+    padding-left: 10px;
+  }
+</style>
+
+<!-- Google Translate hidden container -->
+<div id="google_translate_element" style="visibility:hidden; height:0;"></div>
+
+<!-- Centered Flags Dropdown -->
+<div class="flag-dropdown">
+  <img src="https://flagcdn.com/us.svg" alt="English" id="current-flag"/>
+  <select onchange="changeLang(this)">
+    <!-- Major World Languages -->
+    <optgroup label="Major Languages">
+      <option value="en" data-flag="https://flagcdn.com/us.svg">English</option>
+      <option value="zh-CN" data-flag="https://flagcdn.com/cn.svg">中文 (简体)</option>
+      <option value="zh-TW" data-flag="https://flagcdn.com/tw.svg">中文 (繁體)</option>
+      <option value="es" data-flag="https://flagcdn.com/es.svg">Español</option>
+      <option value="fr" data-flag="https://flagcdn.com/fr.svg">Français</option>
+      <option value="ar" data-flag="https://flagcdn.com/sa.svg">العربية</option>
+      <option value="ru" data-flag="https://flagcdn.com/ru.svg">Русский</option>
+      <option value="pt" data-flag="https://flagcdn.com/pt.svg">Português</option>
+      <option value="de" data-flag="https://flagcdn.com/de.svg">Deutsch</option>
+      <option value="ja" data-flag="https://flagcdn.com/jp.svg">日本語</option>
+      <option value="hi" data-flag="https://flagcdn.com/in.svg">हिन्दी</option>
+      <option value="ko" data-flag="https://flagcdn.com/kr.svg">한국어</option>
+    </optgroup>
+
+    <!-- European Languages -->
+    <optgroup label="European Languages">
+      <option value="it" data-flag="https://flagcdn.com/it.svg">Italiano</option>
+      <option value="nl" data-flag="https://flagcdn.com/nl.svg">Nederlands</option>
+      <option value="pl" data-flag="https://flagcdn.com/pl.svg">Polski</option>
+      <option value="uk" data-flag="https://flagcdn.com/ua.svg">Українська</option>
+      <option value="el" data-flag="https://flagcdn.com/gr.svg">Ελληνικά</option>
+      <option value="sv" data-flag="https://flagcdn.com/se.svg">Svenska</option>
+      <option value="da" data-flag="https://flagcdn.com/dk.svg">Dansk</option>
+      <option value="fi" data-flag="https://flagcdn.com/fi.svg">Suomi</option>
+      <option value="no" data-flag="https://flagcdn.com/no.svg">Norsk</option>
+      <option value="cs" data-flag="https://flagcdn.com/cz.svg">Čeština</option>
+      <option value="hu" data-flag="https://flagcdn.com/hu.svg">Magyar</option>
+      <option value="ro" data-flag="https://flagcdn.com/ro.svg">Română</option>
+      <option value="bg" data-flag="https://flagcdn.com/bg.svg">Български</option>
+      <option value="sr" data-flag="https://flagcdn.com/rs.svg">Српски</option>
+      <option value="hr" data-flag="https://flagcdn.com/hr.svg">Hrvatski</option>
+      <option value="sk" data-flag="https://flagcdn.com/sk.svg">Slovenčina</option>
+      <option value="sl" data-flag="https://flagcdn.com/si.svg">Slovenščina</option>
+      <option value="lt" data-flag="https://flagcdn.com/lt.svg">Lietuvių</option>
+      <option value="lv" data-flag="https://flagcdn.com/lv.svg">Latviešu</option>
+      <option value="et" data-flag="https://flagcdn.com/ee.svg">Eesti</option>
+      <option value="mt" data-flag="https://flagcdn.com/mt.svg">Malti</option>
+      <option value="ga" data-flag="https://flagcdn.com/ie.svg">Gaeilge</option>
+      <option value="is" data-flag="https://flagcdn.com/is.svg">Íslenska</option>
+    </optgroup>
+
+    <!-- Asian Languages -->
+    <optgroup label="Asian Languages">
+      <option value="th" data-flag="https://flagcdn.com/th.svg">ไทย</option>
+      <option value="vi" data-flag="https://flagcdn.com/vn.svg">Tiếng Việt</option>
+      <option value="id" data-flag="https://flagcdn.com/id.svg">Bahasa Indonesia</option>
+      <option value="ms" data-flag="https://flagcdn.com/my.svg">Bahasa Malaysia</option>
+      <option value="fil" data-flag="https://flagcdn.com/ph.svg">Filipino</option>
+      <option value="bn" data-flag="https://flagcdn.com/bd.svg">বাংলা</option>
+      <option value="ur" data-flag="https://flagcdn.com/pk.svg">اردو</option>
+      <option value="fa" data-flag="https://flagcdn.com/ir.svg">فارسی</option>
+      <option value="tr" data-flag="https://flagcdn.com/tr.svg">Türkçe</option>
+      <option value="he" data-flag="https://flagcdn.com/il.svg">עברית</option>
+      <option value="km" data-flag="https://flagcdn.com/kh.svg">ខ្មែរ</option>
+      <option value="lo" data-flag="https://flagcdn.com/la.svg">ລາວ</option>
+      <option value="my" data-flag="https://flagcdn.com/mm.svg">မြန်မာ</option>
+      <option value="si" data-flag="https://flagcdn.com/lk.svg">සිංහල</option>
+      <option value="ne" data-flag="https://flagcdn.com/np.svg">नेपाली</option>
+      <option value="ka" data-flag="https://flagcdn.com/ge.svg">ქართული</option>
+      <option value="hy" data-flag="https://flagcdn.com/am.svg">Հայերեն</option>
+      <option value="uz" data-flag="https://flagcdn.com/uz.svg">O'zbek</option>
+      <option value="kk" data-flag="https://flagcdn.com/kz.svg">Қазақ</option>
+      <option value="mn" data-flag="https://flagcdn.com/mn.svg">Монгол</option>
+    </optgroup>
+
+    <!-- African Languages -->
+    <optgroup label="African Languages">
+      <option value="sw" data-flag="https://flagcdn.com/tz.svg">Kiswahili</option>
+      <option value="am" data-flag="https://flagcdn.com/et.svg">አማርኛ</option>
+      <option value="yo" data-flag="https://flagcdn.com/ng.svg">Yorùbá</option>
+      <option value="ha" data-flag="https://flagcdn.com/ng.svg">Hausa</option>
+      <option value="ig" data-flag="https://flagcdn.com/ng.svg">Igbo</option>
+      <option value="zu" data-flag="https://flagcdn.com/za.svg">isiZulu</option>
+      <option value="xh" data-flag="https://flagcdn.com/za.svg">isiXhosa</option>
+      <option value="af" data-flag="https://flagcdn.com/za.svg">Afrikaans</option>
+      <option value="so" data-flag="https://flagcdn.com/so.svg">Soomaali</option>
+      <option value="rw" data-flag="https://flagcdn.com/rw.svg">Kinyarwanda</option>
+      <option value="mg" data-flag="https://flagcdn.com/mg.svg">Malagasy</option>
+      <option value="ny" data-flag="https://flagcdn.com/mw.svg">Chichewa</option>
+      <option value="sn" data-flag="https://flagcdn.com/zw.svg">Shona</option>
+    </optgroup>
+
+    <!-- Americas & Oceania -->
+    <optgroup label="Americas & Oceania">
+      <option value="ht" data-flag="https://flagcdn.com/ht.svg">Kreyòl Ayisyen</option>
+      <option value="qu" data-flag="https://flagcdn.com/pe.svg">Quechua</option>
+      <option value="gn" data-flag="https://flagcdn.com/py.svg">Guaraní</option>
+      <option value="ay" data-flag="https://flagcdn.com/bo.svg">Aymar</option>
+      <option value="mi" data-flag="https://flagcdn.com/nz.svg">Māori</option>
+      <option value="haw" data-flag="https://flagcdn.com/us.svg">ʻŌlelo Hawaiʻi</option>
+      <option value="sm" data-flag="https://flagcdn.com/ws.svg">Gagana Samoa</option>
+      <option value="fj" data-flag="https://flagcdn.com/fj.svg">Na Vosa Vakaviti</option>
+    </optgroup>
+
+    <!-- Additional Languages -->
+    <optgroup label="Other Languages">
+      <option value="ca" data-flag="https://flagcdn.com/ad.svg">Català</option>
+      <option value="eu" data-flag="https://flagcdn.com/es.svg">Euskara</option>
+      <option value="gl" data-flag="https://flagcdn.com/es.svg">Galego</option>
+      <option value="cy" data-flag="https://flagcdn.com/gb.svg">Cymraeg</option>
+      <option value="gd" data-flag="https://flagcdn.com/gb.svg">Gàidhlig</option>
+      <option value="br" data-flag="https://flagcdn.com/fr.svg">Breton</option>
+      <option value="fy" data-flag="https://flagcdn.com/nl.svg">Frysk</option>
+      <option value="lb" data-flag="https://flagcdn.com/lu.svg">Lëtzebuergesch</option>
+      <option value="sq" data-flag="https://flagcdn.com/al.svg">Shqip</option>
+      <option value="mk" data-flag="https://flagcdn.com/mk.svg">Македонски</option>
+      <option value="bs" data-flag="https://flagcdn.com/ba.svg">Bosanski</option>
+      <option value="be" data-flag="https://flagcdn.com/by.svg">Беларуская</option>
+      <option value="az" data-flag="https://flagcdn.com/az.svg">Azərbaycan</option>
+      <option value="ky" data-flag="https://flagcdn.com/kg.svg">Кыргызча</option>
+      <option value="tg" data-flag="https://flagcdn.com/tj.svg">Тоҷикӣ</option>
+      <option value="tk" data-flag="https://flagcdn.com/tm.svg">Türkmen</option>
+      <option value="ps" data-flag="https://flagcdn.com/af.svg">پښتو</option>
+      <option value="sd" data-flag="https://flagcdn.com/pk.svg">سنڌي</option>
+      <option value="pa" data-flag="https://flagcdn.com/in.svg">ਪੰਜਾਬੀ</option>
+      <option value="gu" data-flag="https://flagcdn.com/in.svg">ગુજરાતી</option>
+      <option value="mr" data-flag="https://flagcdn.com/in.svg">मराठी</option>
+      <option value="ta" data-flag="https://flagcdn.com/in.svg">தமிழ்</option>
+      <option value="te" data-flag="https://flagcdn.com/in.svg">తెలుగు</option>
+      <option value="kn" data-flag="https://flagcdn.com/in.svg">ಕನ್ನಡ</option>
+      <option value="ml" data-flag="https://flagcdn.com/in.svg">മലയാളം</option>
+      <option value="or" data-flag="https://flagcdn.com/in.svg">ଓଡ଼ିଆ</option>
+      <option value="as" data-flag="https://flagcdn.com/in.svg">অসমীয়া</option>
+      <option value="mai" data-flag="https://flagcdn.com/in.svg">मैथिली</option>
+      <option value="sa" data-flag="https://flagcdn.com/in.svg">संस्कृतम्</option>
+    </optgroup>
+  </select>
+</div>
+
+<script>
+  function changeLang(select) {
+    const lang = select.value;
+    const flag = select.selectedOptions[0].dataset.flag;
+    document.getElementById('current-flag').src = flag;
+
+    const googleSelect = document.querySelector(".goog-te-combo");
+    if(googleSelect){
+      googleSelect.value = lang;
+      googleSelect.dispatchEvent(new Event("change"));
+    }
+    
+    // Store selection in localStorage
+    localStorage.setItem('selectedLang', lang);
+    localStorage.setItem('selectedFlag', flag);
+  }
+
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement(
+      { pageLanguage: 'en' },
+      'google_translate_element'
+    );
+    
+    // Restore previous selection
+    const savedLang = localStorage.getItem('selectedLang');
+    const savedFlag = localStorage.getItem('selectedFlag');
+    if(savedLang && savedFlag){
+      const select = document.querySelector('.flag-dropdown select');
+      select.value = savedLang;
+      document.getElementById('current-flag').src = savedFlag;
+      
+      // Update Google Translate if loaded
+      setTimeout(() => {
+        const googleSelect = document.querySelector(".goog-te-combo");
+        if(googleSelect && googleSelect.value !== savedLang){
+          googleSelect.value = savedLang;
+          googleSelect.dispatchEvent(new Event("change"));
+        }
+      }, 1000);
+    }
+  }
+</script>
+
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
   </head>
   <body>
     <div id="root"></div>

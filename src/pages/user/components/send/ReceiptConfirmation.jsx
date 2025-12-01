@@ -51,7 +51,7 @@ export default function ReceiptConfirmation({
             Back
           </button>
           <h1 className="text-xl font-semibold text-gray-900">Review and send</h1>
-          <div className="w-20"></div> {/* Spacer for balance */}
+          <div className="w-20"></div>
         </div>
       </div>
 
@@ -74,12 +74,10 @@ export default function ReceiptConfirmation({
 
         {/* Payment Details */}
         <div className="border border-gray-200 rounded-lg mb-6">
-          {/* Header */}
           <div className="border-b border-gray-200 px-4 py-3">
             <div className="text-sm font-medium text-gray-900">{description}</div>
           </div>
 
-          {/* Details */}
           <div className="divide-y divide-gray-200">
             <div className="px-4 py-3 flex justify-between items-center">
               <div className="text-sm text-gray-600">Method</div>

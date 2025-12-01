@@ -1,292 +1,291 @@
 // TransactionReceiptModal.jsx
-import { useState } from 'react'
-import { Download, Printer, X, ArrowUpRight, ArrowDownLeft, User, Building, CreditCard } from 'lucide-react'
+import { useState } from "react";
+import {
+  Download,
+  Printer,
+  X,
+  ArrowUpRight,
+  ArrowDownLeft,
+  User,
+  Building,
+} from "lucide-react";
 
 export default function TransactionReceiptModal({ transaction, user, onClose }) {
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(false);
 
   const getTransactionIcon = () => {
-    if (transaction.type === 'payment' || transaction.type === 'send') {
-      return <ArrowUpRight className="h-6 w-6 text-red-500" />
-    } else if (transaction.type === 'request' || transaction.type === 'receive') {
-      return <ArrowDownLeft className="h-6 w-6 text-green-500" />
+    if (transaction.type === "payment" || transaction.type === "send") {
+      return <ArrowUpRight className="h-6 w-6 text-red-500" />;
+    } else if (transaction.type === "request" || transaction.type === "receive") {
+      return <ArrowDownLeft className="h-6 w-6 text-green-500" />;
     }
-    return <User className="h-6 w-6 text-gray-500" />
-  }
+    return <User className="h-6 w-6 text-gray-500" />;
+  };
 
   const getTransactionTypeLabel = () => {
     const types = {
-      'payment': 'Payment Sent',
-      'send': 'Money Sent',
-      'request': 'Money Request',
-      'receive': 'Money Received',
-      'admin_credit': 'Admin Credit',
-      'admin_debit': 'Admin Debit'
-    }
-    return types[transaction.type] || transaction.type
-  }
+      payment: "Payment Sent",
+      send: "Money Sent",
+      request: "Money Request",
+      receive: "Money Received",
+      admin_credit: "Admin Credit",
+      admin_debit: "Admin Debit",
+    };
+    return types[transaction.type] || transaction.type;
+  };
 
   const getStatusColor = () => {
     switch (transaction.status) {
-      case 'completed': return 'text-green-600 bg-green-100'
-      case 'pending': return 'text-yellow-600 bg-yellow-100'
-      case 'failed': return 'text-red-600 bg-red-100'
-      default: return 'text-gray-600 bg-gray-100'
+      case "completed":
+        return "text-green-700 bg-green-100";
+      case "pending":
+        return "text-yellow-700 bg-yellow-100";
+      case "failed":
+        return "text-red-700 bg-red-100";
+      default:
+        return "text-gray-700 bg-gray-100";
     }
-  }
+  };
 
   const formatCurrency = (amount) => {
-    const currencySymbol = user?.currency || '$'
-    const amountFormatted = new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount || 0)
-    
-    return `${currencySymbol}${amountFormatted}`
-  }
+    const symbol = user?.currency || "$";
+    return `${symbol}${Number(amount).toFixed(2)}`;
+  };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
-  }
+    return new Date(dateString).toLocaleString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  };
 
   const getAmountPrefix = () => {
-    if (transaction.type === 'payment' || transaction.type === 'send') {
-      return "-"
-    } else if (transaction.type === 'request' || transaction.type === 'receive') {
-      return "+"
-    }
-    return ""
-  }
+    if (["payment", "send"].includes(transaction.type)) return "-";
+    if (["request", "receive"].includes(transaction.type)) return "+";
+    return "";
+  };
 
   const getAmountColor = () => {
-    if (transaction.type === 'payment' || transaction.type === 'send') {
-      return "text-red-600"
-    } else if (transaction.type === 'request' || transaction.type === 'receive') {
-      return "text-green-600"
-    }
-    return "text-gray-600"
-  }
+    if (["payment", "send"].includes(transaction.type)) return "text-red-600";
+    if (["request", "receive"].includes(transaction.type)) return "text-green-600";
+    return "text-gray-800";
+  };
 
   const handlePrint = () => {
-    window.print()
-  }
+    window.print();
+  };
 
   const handleDownload = () => {
-    setLoading(true)
-    
-    // Create receipt content
-    const receiptContent = `
-PAYPAL TRANSACTION RECEIPT
-===============================
+    setLoading(true);
 
-Transaction Details:
--------------------
-Reference ID: ${transaction.reference_id}
-Date & Time: ${formatDate(transaction.created_at)}
+    const content = `
+PAYPAL RECEIPT
+=============================
+
+Transaction: ${getTransactionTypeLabel()}
+Reference: ${transaction.reference_id}
+Date: ${formatDate(transaction.created_at)}
 Status: ${transaction.status.toUpperCase()}
-Type: ${getTransactionTypeLabel()}
 
 Amount: ${getAmountPrefix()}${formatCurrency(transaction.amount)}
-${transaction.fee > 0 ? `Fee: ${formatCurrency(transaction.fee)}` : ''}
-${transaction.net_amount && transaction.net_amount !== transaction.amount ? 
-  `Net Amount: ${formatCurrency(transaction.net_amount)}` : ''}
+${transaction.fee ? "Fee: " + formatCurrency(transaction.fee) : ""}
+${transaction.net_amount ? "Net: " + formatCurrency(transaction.net_amount) : ""}
 
-Parties:
---------
-${transaction.sender ? `From: ${transaction.sender.name} (${transaction.sender.email})` : 'N/A'}
-${transaction.receiver ? `To: ${transaction.receiver.name} (${transaction.receiver.email})` : 'N/A'}
+From: ${transaction.sender?.name || "N/A"} (${transaction.sender?.email || "N/A"})
+To: ${transaction.receiver?.name || "N/A"} (${transaction.receiver?.email || "N/A"})
 
-Description:
------------
-${transaction.description || 'No description provided'}
+Description: ${transaction.description || "None"}
+Note: ${transaction.note || "None"}
 
-Additional Information:
-----------------------
-Transaction ID: ${transaction.id}
-${transaction.note ? `Note: ${transaction.note}` : ''}
+Generated: ${new Date().toLocaleDateString()}
+    `.trim();
 
----
-Thank you for using PayPal
-This is an automated receipt. Please keep it for your records.
-    `.trim()
+    const element = document.createElement("a");
+    const file = new Blob([content], { type: "text/plain" });
+    element.href = URL.createObjectURL(file);
+    element.download = `paypal-receipt-${transaction.reference_id}.txt`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
 
-    // Create and trigger download
-    const element = document.createElement('a')
-    const file = new Blob([receiptContent], { type: 'text/plain' })
-    element.href = URL.createObjectURL(file)
-    element.download = `paypal-receipt-${transaction.reference_id}.txt`
-    document.body.appendChild(element)
-    element.click()
-    document.body.removeChild(element)
-    
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 print:bg-white print:bg-opacity-100">
-      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto print:max-h-none print:shadow-none print:border-0">
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 print:bg-white print:p-0">
+      
+      {/* Centered Responsive Card */}
+      <div
+        id="receipt-area"
+        className="bg-white w-full max-w-xl md:max-w-2xl rounded-xl shadow-lg overflow-hidden print:w-full print:rounded-none print:shadow-none"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 print:border-b-2">
+        <div className="flex items-center justify-between p-5 border-b bg-gray-50 print:border-none">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center print:bg-black">
+            <div className="w-11 h-11 bg-blue-600 rounded-lg flex items-center justify-center">
               <Building className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Transaction Receipt</h2>
-              <p className="text-sm text-gray-600">Official PayPal Receipt</p>
+              <h2 className="text-xl font-bold">Transaction Receipt</h2>
+              <p className="text-gray-500 text-sm">PayPal Official Record</p>
             </div>
           </div>
+
+          {/* Action Buttons */}
           <div className="flex items-center gap-2 print:hidden">
             <button
               onClick={handleDownload}
-              disabled={loading}
-              className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg transition-colors disabled:opacity-50"
+              className="px-3 py-2 border rounded-lg flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:border-gray-400 transition"
             >
               <Download className="h-4 w-4" />
-              {loading ? 'Downloading...' : 'Download'}
+              {loading ? "..." : "Download"}
             </button>
             <button
               onClick={handlePrint}
-              className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg transition-colors"
+              className="px-3 py-2 border rounded-lg flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:border-gray-400 transition"
             >
               <Printer className="h-4 w-4" />
               Print
             </button>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              className="p-2 text-gray-400 hover:text-gray-700"
             >
-              <X className="h-5 w-5" />
+              <X className="h-6 w-6" />
             </button>
           </div>
         </div>
 
-        {/* Receipt Content */}
-        <div className="p-6 space-y-6">
+        {/* Content */}
+        <div className="p-6 space-y-6 text-gray-800">
+
           {/* Status Banner */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-gray-200">
-                  {getTransactionIcon()}
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">{getTransactionTypeLabel()}</h3>
-                  <p className="text-sm text-gray-600">Reference: {transaction.reference_id}</p>
-                </div>
+          <div className="flex justify-between items-center bg-gray-100 p-4 rounded-lg border">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white rounded-full border flex items-center justify-center">
+                {getTransactionIcon()}
               </div>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor()}`}>
-                {transaction.status.toUpperCase()}
-              </span>
+              <div>
+                <h3 className="font-semibold">{getTransactionTypeLabel()}</h3>
+                <p className="text-gray-600 text-sm">
+                  Reference: {transaction.reference_id}
+                </p>
+              </div>
             </div>
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor()}`}
+            >
+              {transaction.status.toUpperCase()}
+            </span>
           </div>
 
-          {/* Amount Section */}
-          <div className="text-center border-b border-gray-200 pb-6">
-            <p className="text-sm text-gray-600 mb-2">TOTAL AMOUNT</p>
-            <h3 className={`text-4xl font-bold ${getAmountColor()}`}>
-              {getAmountPrefix()}{formatCurrency(transaction.amount)}
-            </h3>
+          {/* Amount */}
+          <div className="text-center border-b pb-5">
+            <p className="text-sm text-gray-500">TOTAL AMOUNT</p>
+            <p className={`text-4xl font-bold ${getAmountColor()}`}>
+              {getAmountPrefix()}
+              {formatCurrency(transaction.amount)}
+            </p>
+
             {transaction.fee > 0 && (
-              <p className="text-sm text-gray-600 mt-2">
+              <p className="text-gray-600 text-sm mt-2">
                 Fee: {formatCurrency(transaction.fee)}
               </p>
             )}
-            {transaction.net_amount && transaction.net_amount !== transaction.amount && (
-              <p className="text-sm text-gray-600">
+
+            {transaction.net_amount && (
+              <p className="text-gray-600 text-sm">
                 Net Amount: {formatCurrency(transaction.net_amount)}
               </p>
             )}
           </div>
 
-          {/* Transaction Details */}
+          {/* Grid Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <h4 className="font-semibold text-gray-900">Transaction Information</h4>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm text-gray-600">Date & Time</p>
-                  <p className="font-medium text-gray-900">{formatDate(transaction.created_at)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Transaction ID</p>
-                  <p className="font-medium text-gray-900 font-mono text-sm">{transaction.id}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Reference ID</p>
-                  <p className="font-medium text-gray-900 font-mono text-sm">{transaction.reference_id}</p>
-                </div>
-              </div>
+
+            <div>
+              <h4 className="font-semibold mb-2">Transaction Information</h4>
+              <p className="text-sm text-gray-600">Date</p>
+              <p className="font-medium">{formatDate(transaction.created_at)}</p>
+
+              <p className="text-sm text-gray-600 mt-3">Transaction ID</p>
+              <p className="font-mono">{transaction.id}</p>
             </div>
 
-            <div className="space-y-4">
-              <h4 className="font-semibold text-gray-900">Parties Involved</h4>
-              <div className="space-y-3">
-                {transaction.sender && (
-                  <div>
-                    <p className="text-sm text-gray-600">From</p>
-                    <p className="font-medium text-gray-900">{transaction.sender.name}</p>
-                    {transaction.sender.email && (
-                      <p className="text-sm text-gray-600">{transaction.sender.email}</p>
-                    )}
-                  </div>
-                )}
-                {transaction.receiver && (
-                  <div>
-                    <p className="text-sm text-gray-600">To</p>
-                    <p className="font-medium text-gray-900">{transaction.receiver.name}</p>
-                    {transaction.receiver.email && (
-                      <p className="text-sm text-gray-600">{transaction.receiver.email}</p>
-                    )}
-                  </div>
-                )}
-              </div>
+            <div>
+              <h4 className="font-semibold mb-2">Parties Involved</h4>
+              {transaction.sender && (
+                <>
+                  <p className="text-sm text-gray-600">From</p>
+                  <p className="font-medium">{transaction.sender.name}</p>
+                  <p className="text-sm text-gray-600">{transaction.sender.email}</p>
+                </>
+              )}
+              {transaction.receiver && (
+                <>
+                  <p className="text-sm text-gray-600 mt-3">To</p>
+                  <p className="font-medium">{transaction.receiver.name}</p>
+                  <p className="text-sm text-gray-600">{transaction.receiver.email}</p>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Description */}
           {transaction.description && (
-            <div className="border-t border-gray-200 pt-6">
-              <h4 className="font-semibold text-gray-900 mb-3">Description</h4>
-              <p className="text-gray-700 bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <div>
+              <h4 className="font-semibold mb-2">Description</h4>
+              <p className="bg-gray-50 p-4 rounded-lg border text-gray-700">
                 {transaction.description}
               </p>
             </div>
           )}
 
-          {/* Note */}
           {transaction.note && (
-            <div className="border-t border-gray-200 pt-6">
-              <h4 className="font-semibold text-gray-900 mb-3">Note</h4>
-              <p className="text-gray-700 bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+            <div>
+              <h4 className="font-semibold mb-2">Note</h4>
+              <p className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 text-gray-700">
                 {transaction.note}
               </p>
             </div>
           )}
 
           {/* Footer */}
-          <div className="border-t border-gray-200 pt-6 text-center">
-            <div className="flex items-center justify-center gap-2 text-gray-600 mb-4">
+          <div className="text-center border-t pt-5">
+            <div className="flex items-center justify-center gap-2 text-gray-600 mb-2">
               <Building className="h-5 w-5" />
-              <span className="font-semibold">PAYPAL SECURE TRANSACTION</span>
+              <span className="font-semibold">PayPal Secure Transaction</span>
             </div>
+
             <p className="text-xs text-gray-500">
-              This is an automated receipt. Please keep it for your records.<br />
-              If you have any questions, please visit PayPal Help Center.
-            </p>
-            <p className="text-xs text-gray-400 mt-2">
               Receipt generated on {new Date().toLocaleDateString()}
             </p>
           </div>
         </div>
       </div>
+
+      {/* Print-Only Style */}
+      <style>
+        {`
+          @media print {
+            body * {
+              visibility: hidden;
+            }
+            #receipt-area, #receipt-area * {
+              visibility: visible;
+            }
+            #receipt-area {
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 100%;
+            }
+          }
+        `}
+      </style>
     </div>
-  )
+  );
 }
