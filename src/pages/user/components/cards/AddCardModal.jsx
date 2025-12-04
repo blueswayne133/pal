@@ -57,7 +57,7 @@ export default function AddCardModal({ onClose, onCardAdded }) {
   const currentYear = new Date().getFullYear()
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-white bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md">
         <h3 className="text-lg font-bold mb-4">Link a Card</h3>
         
