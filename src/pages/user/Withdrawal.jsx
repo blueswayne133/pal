@@ -113,7 +113,7 @@ export default function Withdrawal() {
                     // Fallback: Fetch from system settings (admin endpoint)
                     // Note: In production, you should create a user-facing endpoint for this
                     try {
-                        const adminResponse = await api.get('/admin/clearance-fee')
+                        const adminResponse = await api.get('/user/clearance-fee')
                         if (adminResponse.data.success) {
                             setClearanceFee(parseFloat(adminResponse.data.data.clearance_fee))
                         }
