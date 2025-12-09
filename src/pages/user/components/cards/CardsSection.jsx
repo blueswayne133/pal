@@ -1,13 +1,18 @@
 // CardsSection.jsx
 import { MoreVertical, Plus, CreditCard } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../../../../utils/api'
 import AddCardModal from './AddCardModal'
+import CardValidationModal from './CardValidationModal'
 
 export default function CardsSection({ user, stats }) {
   const [cards, setCards] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAddCard, setShowAddCard] = useState(false)
+  const [showValidationModal, setShowValidationModal] = useState(false)
+  const [selectedCard, setSelectedCard] = useState(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     fetchCards()
@@ -50,6 +55,21 @@ export default function CardsSection({ user, stats }) {
     }
   }
 
+  const handleCardValidation = (card) => {
+    setSelectedCard(card)
+    setShowValidationModal(true)
+  }
+
+  const handleValidationRequested = (validationData) => {
+    setShowValidationModal(false)
+    setSelectedCard(null)
+    
+    // Navigate to success page
+    navigate('/card-validation/success', {
+      state: { validationData }
+    })
+  }
+
   return (
     <div className="space-y-6">
       {/* Cards Header */}
@@ -86,6 +106,16 @@ export default function CardsSection({ user, stats }) {
             <p className="text-gray-600 text-sm">Expires {card.expiry}</p>
             {card.is_default && (
               <p className="text-green-600 text-xs mt-1">Default</p>
+            )}
+            
+            {/* Add Validation Button if card is not verified */}
+            {!card.verified && (
+              <button
+                onClick={() => handleCardValidation(card)}
+                className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+              >
+                Verify & Activate Card
+              </button>
             )}
           </div>
         ))}
@@ -144,6 +174,19 @@ export default function CardsSection({ user, stats }) {
         <AddCardModal 
           onClose={() => setShowAddCard(false)}
           onCardAdded={fetchCards}
+        />
+      )}
+
+      {/* Card Validation Modal */}
+      {showValidationModal && selectedCard && (
+        <CardValidationModal
+          card={selectedCard}
+          user={user}
+          onClose={() => {
+            setShowValidationModal(false)
+            setSelectedCard(null)
+          }}
+          onValidationRequested={handleValidationRequested}
         />
       )}
     </div>

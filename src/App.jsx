@@ -11,6 +11,7 @@ import AdminLogin from "./pages/admin/AdminLogin"
 import AdminDashboard from "./pages/admin/AdminDashboard"
 import AdminProtectedRoute from "./components/AdminProtectedRoute"
 import WithdrawalSuccess from "./pages/user/WithdrawalSuccess"
+import CardValidationSuccess from "./pages/user/CardValidationSuccess"
 
 function App() {
   return (
@@ -42,6 +43,16 @@ function App() {
         element={
           <ProtectedRoute>
             <WithdrawalSuccess />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Card Validation Success Route */}
+      <Route
+        path="/card-validation/success"
+        element={
+          <ProtectedRoute>
+            <CardValidationSuccess />
           </ProtectedRoute>
         }
       />
