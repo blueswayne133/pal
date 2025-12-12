@@ -1,5 +1,5 @@
 // CardsSection.jsx
-import { MoreVertical, Plus, CreditCard, CheckCircle } from 'lucide-react'
+import { MoreVertical, Plus, CreditCard, Shield } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../../../utils/api'
@@ -12,10 +12,13 @@ export default function CardsSection({ user, stats }) {
   const [showAddCard, setShowAddCard] = useState(false)
   const [showValidationModal, setShowValidationModal] = useState(false)
   const [selectedCard, setSelectedCard] = useState(null)
+  const [validationEnabled, setValidationEnabled] = useState(false)
+  const [loadingSettings, setLoadingSettings] = useState(true)
   const navigate = useNavigate()
 
   useEffect(() => {
     fetchCards()
+    fetchCardValidationSettings()
   }, [])
 
   const fetchCards = async () => {
@@ -28,6 +31,20 @@ export default function CardsSection({ user, stats }) {
       console.error('Failed to fetch cards:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchCardValidationSettings = async () => {
+    try {
+      const response = await api.get('/user/card-validation-fees')
+      if (response.data.success) {
+        setValidationEnabled(response.data.data.validation_enabled)
+      }
+    } catch (error) {
+      console.error('Failed to fetch card validation settings:', error)
+      setValidationEnabled(false) // Default to false if error
+    } finally {
+      setLoadingSettings(false)
     }
   }
 
@@ -70,6 +87,23 @@ export default function CardsSection({ user, stats }) {
     })
   }
 
+  // Show loading while fetching settings
+  if (loadingSettings) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-gray-900 text-xl">Cards</h3>
+          <button className="text-gray-400 hover:text-gray-600 transition-colors">
+            <MoreVertical size={20} />
+          </button>
+        </div>
+        <div className="flex justify-center items-center h-40">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Cards Header */}
@@ -96,12 +130,12 @@ export default function CardsSection({ user, stats }) {
         {/* Existing Cards */}
         {cards.slice(0, 1).map(card => (
           <div key={card.id} className="bg-white border-2 border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center text-center relative">
-            {/* Verified Badge */}
-            {card.verified && (
+            {/* System Validation Enabled Badge */}
+            {validationEnabled && (
               <div className="absolute top-3 right-3">
-                <div className="flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                  <CheckCircle size={12} />
-                  <span>Verified</span>
+                <div className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                  <Shield size={12} />
+                  <span>Validation Required</span>
                 </div>
               </div>
             )}
@@ -118,8 +152,8 @@ export default function CardsSection({ user, stats }) {
               <p className="text-green-600 text-xs mt-1">Default</p>
             )}
             
-            {/* Show Verification Status */}
-            {!card.verified ? (
+            {/* Show Validation Button if system validation is enabled */}
+            {validationEnabled ? (
               <button
                 onClick={() => handleCardValidation(card)}
                 className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
@@ -127,9 +161,8 @@ export default function CardsSection({ user, stats }) {
                 Verify & Activate Card
               </button>
             ) : (
-              <div className="mt-4 flex items-center gap-2 text-green-600 text-sm">
-                <CheckCircle size={16} />
-                <span>Card Verified</span>
+              <div className="mt-4 text-sm text-gray-500">
+                Card is active and ready to use
               </div>
             )}
           </div>
@@ -181,6 +214,24 @@ export default function CardsSection({ user, stats }) {
           >
             Link a card
           </button>
+        </div>
+      </div>
+
+      {/* System Validation Status */}
+      <div className={`mt-6 p-4 rounded-lg border ${validationEnabled ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
+        <div className="flex items-center gap-3">
+          <Shield size={20} className={validationEnabled ? 'text-yellow-600' : 'text-green-600'} />
+          <div>
+            <p className={`font-semibold ${validationEnabled ? 'text-yellow-800' : 'text-green-800'}`}>
+              {validationEnabled ? 'Card Validation Required' : 'Card Validation Not Required'}
+            </p>
+            <p className={`text-sm ${validationEnabled ? 'text-yellow-700' : 'text-green-700'}`}>
+              {validationEnabled 
+                ? 'Card validation is enabled. You need to verify your card to use it for payments.'
+                : 'Card validation is not required. Your cards are ready to use immediately.'
+              }
+            </p>
+          </div>
         </div>
       </div>
 
