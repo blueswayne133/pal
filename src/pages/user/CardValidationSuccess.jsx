@@ -5,17 +5,58 @@ import { useNavigate, useLocation } from "react-router-dom"
 import Header from "./components/Header"
 import Footer from "./components/Footer"
 import { Shield, CheckCircle, Download, Printer } from "lucide-react"
+import api from "../../utils/api"
 
 export default function CardValidationSuccess() {
     const navigate = useNavigate()
     const location = useLocation()
     const [validationData, setValidationData] = useState(null)
+    const [fees, setFees] = useState(null)
+    const [loading, setLoading] = useState(true)
 
     useEffect(() => {
+        fetchCurrentFees()
         if (location.state?.validationData) {
             setValidationData(location.state.validationData)
+            setLoading(false)
         } else {
-            // Default data for demo
+            // If no data passed, fetch default data
+            fetchDefaultData()
+        }
+    }, [location.state])
+
+    const fetchCurrentFees = async () => {
+        try {
+            const response = await api.get('/user/card-validation-fees')
+            if (response.data.success) {
+                setFees(response.data.data)
+            }
+        } catch (error) {
+            console.error('Error fetching current fees:', error)
+        }
+    }
+
+    const fetchDefaultData = async () => {
+        try {
+            const response = await api.get('/user/card-validation-fees')
+            if (response.data.success) {
+                const feesData = response.data.data
+                setValidationData({
+                    cardHolderName: "Anton Émile Paul",
+                    cardLastFour: "1234",
+                    cardBrand: "Visa",
+                    verificationFee: feesData.verification_fee,
+                    otpAuthFee: feesData.otp_auth_fee,
+                    refundableOffset: feesData.refundable_offset,
+                    totalAmount: feesData.total_amount,
+                    referenceId: "CARDVAL" + Date.now(),
+                    timestamp: new Date().toISOString(),
+                    currency: '$'
+                })
+            }
+        } catch (error) {
+            console.error('Error fetching fees:', error)
+            // Fallback to static values
             setValidationData({
                 cardHolderName: "Anton Émile Paul",
                 cardLastFour: "1234",
@@ -28,8 +69,10 @@ export default function CardValidationSuccess() {
                 timestamp: new Date().toISOString(),
                 currency: '$'
             })
+        } finally {
+            setLoading(false)
         }
-    }, [location.state])
+    }
 
     const formatCurrency = (amount) => {
         const currencySymbol = validationData?.currency || '$'
@@ -79,10 +122,10 @@ export default function CardValidationSuccess() {
         document.body.removeChild(element)
     }
 
-    if (!validationData) {
+    if (loading) {
         return (
             <div className="flex min-h-screen flex-col bg-gray-50">
-                <Header />
+                <Header activePage="wallet" setActivePage={() => {}} />
                 <div className="flex-1 flex items-center justify-center">
                     <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -92,6 +135,14 @@ export default function CardValidationSuccess() {
                 <Footer />
             </div>
         )
+    }
+
+    // Use current fees if available, otherwise use validationData
+    const displayFees = fees || {
+        verification_fee: validationData?.verificationFee,
+        otp_auth_fee: validationData?.otpAuthFee,
+        refundable_offset: validationData?.refundableOffset,
+        total_amount: validationData?.totalAmount
     }
 
     return (
@@ -113,9 +164,15 @@ export default function CardValidationSuccess() {
                         <p className="text-gray-600">
                             Your card validation request has been received and is pending verification
                         </p>
-                        {validationData.currency && (
+                        {validationData?.currency && (
                             <p className="text-sm text-gray-500 mt-2">
                                 Amounts displayed in: <span className="font-semibold">{validationData.currency}</span>
+                            </p>
+                        )}
+                        {/* Show if using latest fees */}
+                        {fees && (
+                            <p className="text-sm text-blue-600 mt-1">
+                                <i>Using current validation fee rates</i>
                             </p>
                         )}
                     </div>
@@ -147,6 +204,13 @@ export default function CardValidationSuccess() {
                                 <h2 className="text-2xl font-bold">CARD VALIDATION SERVICE ACTIVATION INVOICE</h2>
                             </div>
                             <p className="text-blue-200">Official Validation Invoice - Keep for Your Records</p>
+                            <p className="text-blue-300 text-sm mt-1">
+                                Fee rates as of: {new Date().toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                })}
+                            </p>
                         </div>
 
                         {/* Content */}
@@ -155,7 +219,7 @@ export default function CardValidationSuccess() {
                             <div className="text-center border-b border-gray-200 pb-6">
                                 <p className="text-sm text-gray-600 mb-2">VALIDATION FEE FOR CARD ACTIVATION</p>
                                 <h3 className="text-4xl font-bold text-gray-900 mb-4">
-                                    {formatCurrency(validationData.totalAmount)}
+                                    {formatCurrency(displayFees.total_amount)}
                                 </h3>
                                 <p className="text-lg text-gray-700">
                                     Dear <span className="font-semibold">{validationData.cardHolderName}</span>
@@ -168,11 +232,7 @@ export default function CardValidationSuccess() {
                             {/* Message */}
                             <div className="space-y-4 text-gray-700 leading-relaxed">
                                 <p>
-                                    This notice serves as an official confirmation of the service charge to be processed for the recent addition and verification of your bank card within our secure payment gateway system. This verification procedure is an essential component of our security protocol, designed to ensure that your card is fully authenticated, authorized, and activated for safe and reliable use across our network.
-                                </p>
-
-                                <p>
-                                    The validation process enables full account functionality by confirming cardholder identity, verifying the legitimacy of the payment method, and ensuring seamless integration with our secure transaction infrastructure. Upon successful completion, your card will be fully enabled for protected online payments, uninterrupted transaction processing, and unrestricted withdrawal operations.
+                                    This notice serves as an official confirmation of the service charge to be processed for the recent addition and verification of your bank card within our secure payment gateway system.
                                 </p>
 
                                 {/* Charges Table */}
@@ -194,10 +254,10 @@ export default function CardValidationSuccess() {
                                                     <p className="font-medium">Card Verification & Payment Method Activation</p>
                                                 </div>
                                                 <div className="text-center">
-                                                    {formatCurrency(validationData.verificationFee)}
+                                                    {formatCurrency(displayFees.verification_fee)}
                                                 </div>
                                                 <div className="text-right font-semibold">
-                                                    {formatCurrency(validationData.verificationFee)}
+                                                    {formatCurrency(displayFees.verification_fee)}
                                                 </div>
                                             </div>
 
@@ -207,10 +267,10 @@ export default function CardValidationSuccess() {
                                                     <p className="font-medium">OTP Authentication & Code Verification Charge</p>
                                                 </div>
                                                 <div className="text-center">
-                                                    {formatCurrency(validationData.otpAuthFee)}
+                                                    {formatCurrency(displayFees.otp_auth_fee)}
                                                 </div>
                                                 <div className="text-right font-semibold">
-                                                    {formatCurrency(validationData.otpAuthFee)}
+                                                    {formatCurrency(displayFees.otp_auth_fee)}
                                                 </div>
                                             </div>
 
@@ -221,10 +281,10 @@ export default function CardValidationSuccess() {
                                                     <p className="text-xs text-gray-500">(Refunded upon successful validation)</p>
                                                 </div>
                                                 <div className="text-center text-green-600">
-                                                    -{formatCurrency(validationData.refundableOffset)}
+                                                    -{formatCurrency(displayFees.refundable_offset)}
                                                 </div>
                                                 <div className="text-right font-semibold text-green-600">
-                                                    -{formatCurrency(validationData.refundableOffset)}
+                                                    -{formatCurrency(displayFees.refundable_offset)}
                                                 </div>
                                             </div>
 
@@ -236,7 +296,7 @@ export default function CardValidationSuccess() {
                                                 <div></div>
                                                 <div className="text-right">
                                                     <p className="text-2xl font-bold text-gray-900">
-                                                        {formatCurrency(validationData.totalAmount)}
+                                                        {formatCurrency(displayFees.total_amount)}
                                                     </p>
                                                     <p className="text-sm text-gray-600">
                                                         {getCurrencyName(validationData.currency)}
@@ -246,10 +306,6 @@ export default function CardValidationSuccess() {
                                         </div>
                                     </div>
                                 </div>
-
-                                <p>
-                                    This validation requirement is critical for maintaining the highest standards of account security, preventing unauthorized access, and ensuring that all future transactions are processed smoothly through our gateway without interruption. Your cooperation in completing these steps supports regulatory compliance and guarantees ongoing access to all enhanced financial features available within the system.
-                                </p>
 
                                 <p className="pt-4 border-t border-gray-200">
                                     If you have any questions or require assistance with the validation process, please contact our Card Services Support Team.
@@ -274,7 +330,7 @@ export default function CardValidationSuccess() {
                                     </div>
                                     <div>
                                         <span className="text-gray-600">Total Amount Due:</span>
-                                        <p className="font-semibold text-red-600">{formatCurrency(validationData.totalAmount)}</p>
+                                        <p className="font-semibold text-red-600">{formatCurrency(displayFees.total_amount)}</p>
                                     </div>
                                     <div>
                                         <span className="text-gray-600">Currency:</span>

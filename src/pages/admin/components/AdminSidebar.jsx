@@ -8,7 +8,8 @@ import {
   DollarSign,
   ChevronLeft,
   ChevronRight,
-  Settings
+  Settings,
+  ShieldCheck  // Add this import
 } from "lucide-react"
 import { useState } from "react"
 
@@ -26,6 +27,7 @@ export default function AdminSidebar({
     { id: "transactions", label: "Transactions", icon: CreditCard },
     { id: "settings", label: "Settings", icon: Settings },
     { id: "email", label: "Email Management", icon: Mail },
+    { id: "card-settings", label: "Card Validation Settings", icon: ShieldCheck }, // ADD THIS LINE
   ]
 
   return (

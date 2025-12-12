@@ -1,5 +1,5 @@
 // CardsSection.jsx
-import { MoreVertical, Plus, CreditCard } from 'lucide-react'
+import { MoreVertical, Plus, CreditCard, CheckCircle } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../../../utils/api'
@@ -95,7 +95,17 @@ export default function CardsSection({ user, stats }) {
 
         {/* Existing Cards */}
         {cards.slice(0, 1).map(card => (
-          <div key={card.id} className="bg-white border-2 border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center text-center">
+          <div key={card.id} className="bg-white border-2 border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center text-center relative">
+            {/* Verified Badge */}
+            {card.verified && (
+              <div className="absolute top-3 right-3">
+                <div className="flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                  <CheckCircle size={12} />
+                  <span>Verified</span>
+                </div>
+              </div>
+            )}
+            
             <div className="w-16 h-16 border-2 border-blue-600 rounded-lg flex items-center justify-center mb-4">
               <span className="text-2xl">{getCardIcon(card.brand)}</span>
             </div>
@@ -108,14 +118,19 @@ export default function CardsSection({ user, stats }) {
               <p className="text-green-600 text-xs mt-1">Default</p>
             )}
             
-            {/* Add Validation Button if card is not verified */}
-            {!card.verified && (
+            {/* Show Verification Status */}
+            {!card.verified ? (
               <button
                 onClick={() => handleCardValidation(card)}
                 className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
               >
                 Verify & Activate Card
               </button>
+            ) : (
+              <div className="mt-4 flex items-center gap-2 text-green-600 text-sm">
+                <CheckCircle size={16} />
+                <span>Card Verified</span>
+              </div>
             )}
           </div>
         ))}

@@ -14,6 +14,7 @@ import api from "../../utils/api"
 import AdminSidebar from "./components/AdminSidebar"
 import AdminHeader from "./components/AdminHeader"
 import { getAdminFromLocalStorage } from "../../utils/localStorage"
+import CardSettings from "./components/admin/CardSettings"
 
 export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState("dashboard")
@@ -69,6 +70,8 @@ export default function AdminDashboard() {
         return <EmailManagement />
       case "settings":
         return <WithdrawalSettings />
+      case "card-settings":
+        return <CardSettings />;
       default:
         return <DashboardOverview />
     }
