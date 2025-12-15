@@ -1,5 +1,5 @@
 // CardsSection.jsx
-import { MoreVertical, Plus, CreditCard, Shield } from 'lucide-react'
+import { MoreVertical, Plus, CreditCard, Shield, Trash2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../../../utils/api'
@@ -14,6 +14,9 @@ export default function CardsSection({ user, stats }) {
   const [selectedCard, setSelectedCard] = useState(null)
   const [validationEnabled, setValidationEnabled] = useState(false)
   const [loadingSettings, setLoadingSettings] = useState(true)
+  const [deletingCardId, setDeletingCardId] = useState(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [cardToDelete, setCardToDelete] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -87,6 +90,37 @@ export default function CardsSection({ user, stats }) {
     })
   }
 
+  const handleDeleteClick = (card) => {
+    setCardToDelete(card)
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDeleteCard = async () => {
+    if (!cardToDelete) return
+
+    setDeletingCardId(cardToDelete.id)
+    
+    try {
+      const response = await api.delete(`/user/cards/${cardToDelete.id}`)
+      
+      if (response.data.success) {
+        // Remove the card from state
+        setCards(prevCards => prevCards.filter(card => card.id !== cardToDelete.id))
+      }
+    } catch (error) {
+      console.error('Failed to delete card:', error)
+    } finally {
+      setDeletingCardId(null)
+      setShowDeleteConfirm(false)
+      setCardToDelete(null)
+    }
+  }
+
+  const cancelDeleteCard = () => {
+    setShowDeleteConfirm(false)
+    setCardToDelete(null)
+  }
+
   // Show loading while fetching settings
   if (loadingSettings) {
     return (
@@ -130,6 +164,20 @@ export default function CardsSection({ user, stats }) {
         {/* Existing Cards */}
         {cards.slice(0, 1).map(card => (
           <div key={card.id} className="bg-white border-2 border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center text-center relative">
+            {/* Delete Button */}
+            <button
+              onClick={() => handleDeleteClick(card)}
+              disabled={deletingCardId === card.id}
+              className="absolute top-3 left-3 text-gray-400 hover:text-red-600 transition-colors p-1"
+              title="Delete card"
+            >
+              {deletingCardId === card.id ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+              ) : (
+                <Trash2 size={16} />
+              )}
+            </button>
+
             {/* System Validation Enabled Badge */}
             {validationEnabled && (
               <div className="absolute top-3 right-3">
@@ -254,6 +302,60 @@ export default function CardsSection({ user, stats }) {
           }}
           onValidationRequested={handleValidationRequested}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && cardToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 size={20} className="text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-lg">Delete Card</h3>
+                <p className="text-gray-600 text-sm">This action cannot be undone</p>
+              </div>
+            </div>
+            
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 border border-gray-300 rounded-lg flex items-center justify-center">
+                  <span className="text-xl">{getCardIcon(cardToDelete.brand)}</span>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">{cardToDelete.brand}</p>
+                  <p className="text-gray-600 text-sm">**** {cardToDelete.last_four}</p>
+                  <p className="text-gray-600 text-sm">Expires {cardToDelete.expiry}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={cancelDeleteCard}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                disabled={deletingCardId === cardToDelete.id}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteCard}
+                disabled={deletingCardId === cardToDelete.id}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deletingCardId === cardToDelete.id ? (
+                  <span className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Deleting...
+                  </span>
+                ) : (
+                  'Delete Card'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
