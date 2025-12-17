@@ -239,12 +239,12 @@ export default function CardsSection({ user, stats }) {
           Link a card
         </button>
         {cards.length > 0 && (
-          <button 
+        /*  <button 
             onClick={fetchCards}
             className="text-blue-600 hover:text-blue-700 font-medium text-sm"
           >
             Manage cards
-          </button>
+          </button> */
         )}
       </div>
 
